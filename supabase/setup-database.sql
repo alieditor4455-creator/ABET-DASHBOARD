@@ -1,5 +1,19 @@
 -- ABET Content OS: complete database setup.
--- Paste this whole file into Supabase → SQL Editor → New query, then click Run. Run it once.
+-- Safe to run more than once: it first removes any earlier (or half-finished) ABET setup, then installs everything.
+-- WARNING: re-running removes ABET content data. Only run it during setup.
+begin;
+
+drop trigger if exists on_auth_user_created on auth.users;
+drop policy if exists content_read on storage.objects;
+drop policy if exists content_upload on storage.objects;
+drop table if exists public.invitations, public.social_connections, public.app_settings, public.activity,
+  public.approvals, public.assets, public.captions, public.scripts, public.content_items, public.styles,
+  public.profiles, public.role_permissions cascade;
+drop function if exists public.handle_new_user(), public.my_profile(), public.current_role_name(),
+  public.has_perm(public.app_permission), public.is_member(), public.touch_updated_at(),
+  public.enforce_status_rules(), public.enforce_profile_rules() cascade;
+drop type if exists public.asset_state, public.content_status, public.content_type, public.style_category,
+  public.app_permission, public.app_role cascade;
 
 -- ===== 20261123000001_init.sql =====
 -- ABET Content OS: initial schema.
@@ -425,3 +439,5 @@ insert into public.styles (category, name, description, motif, complexity, spec)
 ('pdf', 'Brochure', 'Account types and services overview.', 'corp', 'Medium', '[["Pages","4–8"],["Cover","Logo, headline, MT5 visual"],["Body","Two-column grid"],["Elements","Account comparison table"],["Footer","Registration line"],["Last page","Full risk warning, contact details"]]'::jsonb)
 on conflict (category, name) do nothing;
 
+
+commit;
