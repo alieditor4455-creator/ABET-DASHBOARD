@@ -64,18 +64,44 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.profiles where id = auth.uid() and active)
 $$;
 
--- New sign-ups get a Viewer profile. The very first user becomes Super Admin.
+-- Invitations: an admin adds an email and role; that person's sign-up is activated with the role.
+create table public.invitations (
+  email text primary key check (email = lower(email)),
+  role public.app_role not null default 'viewer',
+  invited_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  accepted_at timestamptz
+);
+
+-- Sign-up rules:
+--  * the very first account becomes an active Super Admin;
+--  * an invited email becomes active with the invited role;
+--  * anyone else gets an inactive Viewer profile and sees nothing until an admin activates them.
 create or replace function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
+declare inv public.invitations;
 begin
-  insert into public.profiles (id, full_name, role)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-    case when exists (select 1 from public.profiles) then 'viewer'::public.app_role else 'super_admin'::public.app_role end
-  );
+  select * into inv from public.invitations where email = lower(new.email) and accepted_at is null;
+  if not exists (select 1 from public.profiles) then
+    insert into public.profiles (id, full_name, role, active)
+    values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)), 'super_admin', true);
+  elsif inv.email is not null then
+    insert into public.profiles (id, full_name, role, active)
+    values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)), inv.role, true);
+    update public.invitations set accepted_at = now() where email = inv.email;
+  else
+    insert into public.profiles (id, full_name, role, active)
+    values (new.id, coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)), 'viewer', false);
+  end if;
   return new;
 end $$;
+
+-- Lets a signed-in but not-yet-activated user see their own status.
+create or replace function public.my_profile() returns json
+language sql stable security definer set search_path = public as $$
+  select json_build_object('id', id, 'full_name', full_name, 'role', role, 'active', active)
+  from public.profiles where id = auth.uid()
+$$;
 
 create trigger on_auth_user_created after insert on auth.users
 for each row execute function public.handle_new_user();
@@ -327,4 +353,9 @@ create policy write_activity on public.activity for insert to authenticated with
 create policy edit_settings on public.app_settings for update to authenticated using (public.has_perm('settings.manage') or public.has_perm('team.manage'));
 create policy edit_social on public.social_connections for update to authenticated using (public.has_perm('settings.manage'));
 
--- Nothing is ever hard-deleted except drafts (above): no delete policies elsewhere.
+-- Invitations: admins only.
+alter table public.invitations enable row level security;
+create policy manage_invites on public.invitations for all to authenticated
+  using (public.has_perm('team.manage')) with check (public.has_perm('team.manage') and (role <> 'super_admin' or public.current_role_name() = 'super_admin'));
+
+-- Nothing is ever hard-deleted except drafts (above) and unused invitations: no delete policies elsewhere.

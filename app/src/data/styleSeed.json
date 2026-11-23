@@ -1,0 +1,1708 @@
+[
+ {
+  "category": "video",
+  "name": "Premium Minimalist",
+  "description": "One idea per frame, generous space, calm pacing.",
+  "motif": "mini",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Pacing",
+    "2.5–4 s per shot"
+   ],
+   [
+    "Transitions",
+    "Soft cuts, 8-frame dissolves"
+   ],
+   [
+    "Easing",
+    "Ease-out cubic, 400–600 ms"
+   ],
+   [
+    "Typography",
+    "One display weight, max 6 words on screen"
+   ],
+   [
+    "Colour treatment",
+    "Ink and white, red only on the key word"
+   ],
+   [
+    "Captions",
+    "Single word, lower centre"
+   ],
+   [
+    "B-roll",
+    "Desk and product detail, slow push-ins"
+   ],
+   [
+    "Sound design",
+    "Low ambient bed"
+   ],
+   [
+    "Aspect ratios",
+    "9:16, 1:1, 16:9"
+   ],
+   [
+    "Complexity",
+    "Low"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "High-Retention Educational",
+  "description": "Fast hook, a visual change every 1–2 seconds.",
+  "motif": "caption",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pacing",
+    "1–2 s per change"
+   ],
+   [
+    "Transitions",
+    "Punch-in zooms, jump cuts"
+   ],
+   [
+    "Easing",
+    "Ease-in-out quad, 200–300 ms"
+   ],
+   [
+    "Typography",
+    "Bold sans, two-line captions"
+   ],
+   [
+    "Colour treatment",
+    "Red keyword highlight on dark plates"
+   ],
+   [
+    "Captions",
+    "Word by word with keyword highlight"
+   ],
+   [
+    "B-roll",
+    "Screen grabs, icons, simple charts"
+   ],
+   [
+    "Sound design",
+    "Light whooshes on zooms"
+   ],
+   [
+    "Aspect ratios",
+    "9:16"
+   ],
+   [
+    "Complexity",
+    "Medium"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Documentary Storytelling",
+  "description": "Narrative arc with interviews and measured pacing.",
+  "motif": "doc",
+  "complexity": "High",
+  "spec": [
+   [
+    "Pacing",
+    "3–6 s per shot"
+   ],
+   [
+    "Transitions",
+    "Straight cuts, J and L cuts"
+   ],
+   [
+    "Easing",
+    "Linear titles, 800 ms fades"
+   ],
+   [
+    "Typography",
+    "Display titles, small lower thirds"
+   ],
+   [
+    "Colour treatment",
+    "Desaturated grade, warm highlights"
+   ],
+   [
+    "Captions",
+    "Sentence captions"
+   ],
+   [
+    "B-roll",
+    "Archival, location, detail shots"
+   ],
+   [
+    "Sound design",
+    "Score-led, room tone kept"
+   ],
+   [
+    "Aspect ratios",
+    "16:9, 4:5"
+   ],
+   [
+    "Complexity",
+    "High"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Cinematic B-Roll",
+  "description": "Atmospheric footage carried by music and voice-over.",
+  "motif": "cine",
+  "complexity": "High",
+  "spec": [
+   [
+    "Pacing",
+    "2–3 s per shot"
+   ],
+   [
+    "Transitions",
+    "Match cuts, speed ramps"
+   ],
+   [
+    "Easing",
+    "Ease-in-out sine, 600 ms"
+   ],
+   [
+    "Typography",
+    "Wide-tracked caps titles"
+   ],
+   [
+    "Colour treatment",
+    "Neutral grade, deep shadows"
+   ],
+   [
+    "Captions",
+    "Title cards only"
+   ],
+   [
+    "B-roll",
+    "City, screens, markets, hands"
+   ],
+   [
+    "Sound design",
+    "Music-driven, hits on cuts"
+   ],
+   [
+    "Aspect ratios",
+    "16:9"
+   ],
+   [
+    "Complexity",
+    "High"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Kinetic Typography",
+  "description": "Words move in rhythm with the voice.",
+  "motif": "type",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pacing",
+    "Synced to syllables"
+   ],
+   [
+    "Transitions",
+    "Type-driven wipes"
+   ],
+   [
+    "Easing",
+    "Ease-out expo, 250–400 ms"
+   ],
+   [
+    "Typography",
+    "Heavy display, stacked lines"
+   ],
+   [
+    "Colour treatment",
+    "White on ink, red accent word"
+   ],
+   [
+    "Captions",
+    "The type is the caption"
+   ],
+   [
+    "B-roll",
+    "None"
+   ],
+   [
+    "Sound design",
+    "Voice-led, subtle ticks"
+   ],
+   [
+    "Aspect ratios",
+    "9:16, 1:1"
+   ],
+   [
+    "Complexity",
+    "Medium"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Motion Graphics Intensive",
+  "description": "Fully designed scenes with shapes, icons and data.",
+  "motif": "mg",
+  "complexity": "High",
+  "spec": [
+   [
+    "Pacing",
+    "A scene every 3–4 s"
+   ],
+   [
+    "Transitions",
+    "Shape morphs, mask reveals"
+   ],
+   [
+    "Easing",
+    "Ease-in-out cubic, 500 ms"
+   ],
+   [
+    "Typography",
+    "Space Grotesk headings, Poppins labels"
+   ],
+   [
+    "Colour treatment",
+    "Brand palette on ink"
+   ],
+   [
+    "Captions",
+    "Built into layout"
+   ],
+   [
+    "B-roll",
+    "Generated graphics only"
+   ],
+   [
+    "Sound design",
+    "Designed SFX per element"
+   ],
+   [
+    "Aspect ratios",
+    "16:9, 9:16"
+   ],
+   [
+    "Complexity",
+    "High"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Corporate Clean",
+  "description": "Polished and structured for company and policy content.",
+  "motif": "corp",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Pacing",
+    "3–5 s per shot"
+   ],
+   [
+    "Transitions",
+    "Cross dissolves, slides"
+   ],
+   [
+    "Easing",
+    "Ease-out quad, 400 ms"
+   ],
+   [
+    "Typography",
+    "Sans throughout, clear hierarchy"
+   ],
+   [
+    "Colour treatment",
+    "White, ink, restrained red"
+   ],
+   [
+    "Captions",
+    "Full captions in a clean box"
+   ],
+   [
+    "B-roll",
+    "Office, team, interface"
+   ],
+   [
+    "Sound design",
+    "Light corporate bed"
+   ],
+   [
+    "Aspect ratios",
+    "16:9, 1:1"
+   ],
+   [
+    "Complexity",
+    "Low"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Podcast Highlights",
+  "description": "Two-camera conversation cutdowns with speaker labels.",
+  "motif": "pod",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Pacing",
+    "Conversational"
+   ],
+   [
+    "Transitions",
+    "Switch on speaker"
+   ],
+   [
+    "Easing",
+    "Hard cuts"
+   ],
+   [
+    "Typography",
+    "Speaker chips, bold captions"
+   ],
+   [
+    "Colour treatment",
+    "Dark plates, red speaker chip"
+   ],
+   [
+    "Captions",
+    "Active speaker colour"
+   ],
+   [
+    "B-roll",
+    "None"
+   ],
+   [
+    "Sound design",
+    "Voice only"
+   ],
+   [
+    "Aspect ratios",
+    "9:16, 1:1"
+   ],
+   [
+    "Complexity",
+    "Low"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "UGC Authentic",
+  "description": "Handheld, phone-native and personal on purpose.",
+  "motif": "ugc",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Pacing",
+    "Fast, natural"
+   ],
+   [
+    "Transitions",
+    "Jump cuts"
+   ],
+   [
+    "Easing",
+    "None"
+   ],
+   [
+    "Typography",
+    "Native-style captions"
+   ],
+   [
+    "Colour treatment",
+    "Ungraded, natural light"
+   ],
+   [
+    "Captions",
+    "Platform-native style"
+   ],
+   [
+    "B-roll",
+    "Selfie inserts, street shots"
+   ],
+   [
+    "Sound design",
+    "Natural audio"
+   ],
+   [
+    "Aspect ratios",
+    "9:16"
+   ],
+   [
+    "Complexity",
+    "Low"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Screen Recording Tutorials",
+  "description": "MT5 walkthroughs with zoom-ins and cursor emphasis.",
+  "motif": "screen",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pacing",
+    "Step paced"
+   ],
+   [
+    "Transitions",
+    "Zoom to region, smooth pans"
+   ],
+   [
+    "Easing",
+    "Ease-in-out cubic, 500 ms"
+   ],
+   [
+    "Typography",
+    "Step numbers, UI labels"
+   ],
+   [
+    "Colour treatment",
+    "Neutral UI, red highlight rings"
+   ],
+   [
+    "Captions",
+    "Step captions at top"
+   ],
+   [
+    "B-roll",
+    "Demo account screens only"
+   ],
+   [
+    "Sound design",
+    "Soft clicks"
+   ],
+   [
+    "Aspect ratios",
+    "16:9, 9:16"
+   ],
+   [
+    "Complexity",
+    "Medium"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Financial Chart Explainers",
+  "description": "Animated candles and annotations explain market ideas.",
+  "motif": "chart",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pacing",
+    "Medium"
+   ],
+   [
+    "Transitions",
+    "Draw-on lines, annotation pops"
+   ],
+   [
+    "Easing",
+    "Ease-out cubic, 600 ms"
+   ],
+   [
+    "Typography",
+    "Space Grotesk numbers"
+   ],
+   [
+    "Colour treatment",
+    "Ink chart, green and red candles"
+   ],
+   [
+    "Captions",
+    "Annotation-led"
+   ],
+   [
+    "B-roll",
+    "Illustrative charts labelled “example”"
+   ],
+   [
+    "Sound design",
+    "Ticks on data points"
+   ],
+   [
+    "Aspect ratios",
+    "16:9, 9:16"
+   ],
+   [
+    "Complexity",
+    "Medium"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "UI-Based Explainers",
+  "description": "Ideas explained through clean interface cards.",
+  "motif": "ui",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pacing",
+    "Medium"
+   ],
+   [
+    "Transitions",
+    "Card slides, depth shifts"
+   ],
+   [
+    "Easing",
+    "Ease-out quint, 500 ms"
+   ],
+   [
+    "Typography",
+    "UI type scale"
+   ],
+   [
+    "Colour treatment",
+    "Light UI on ink frame"
+   ],
+   [
+    "Captions",
+    "In-card labels"
+   ],
+   [
+    "B-roll",
+    "Product UI only"
+   ],
+   [
+    "Sound design",
+    "Interface clicks"
+   ],
+   [
+    "Aspect ratios",
+    "9:16, 16:9"
+   ],
+   [
+    "Complexity",
+    "Medium"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Split-Screen Comparison",
+  "description": "This vs. that, side by side.",
+  "motif": "split",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Pacing",
+    "Medium"
+   ],
+   [
+    "Transitions",
+    "Synchronised wipes"
+   ],
+   [
+    "Easing",
+    "Ease-in-out cubic, 400 ms"
+   ],
+   [
+    "Typography",
+    "Matching headers each side"
+   ],
+   [
+    "Colour treatment",
+    "Neutral left, red-accent right"
+   ],
+   [
+    "Captions",
+    "Per-side labels"
+   ],
+   [
+    "B-roll",
+    "Matched pairs"
+   ],
+   [
+    "Sound design",
+    "Panned cues"
+   ],
+   [
+    "Aspect ratios",
+    "9:16, 16:9"
+   ],
+   [
+    "Complexity",
+    "Low"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Data Storytelling",
+  "description": "Numbers become the story, always with sources.",
+  "motif": "data",
+  "complexity": "High",
+  "spec": [
+   [
+    "Pacing",
+    "Measured"
+   ],
+   [
+    "Transitions",
+    "Counter roll-ups, bar grows"
+   ],
+   [
+    "Easing",
+    "Ease-out cubic, 800 ms"
+   ],
+   [
+    "Typography",
+    "Space Grotesk figures"
+   ],
+   [
+    "Colour treatment",
+    "Single-hue scale, red for focus"
+   ],
+   [
+    "Captions",
+    "Source line always visible"
+   ],
+   [
+    "B-roll",
+    "Charts only"
+   ],
+   [
+    "Sound design",
+    "Soft swells"
+   ],
+   [
+    "Aspect ratios",
+    "16:9, 1:1"
+   ],
+   [
+    "Complexity",
+    "High"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Fast-Paced Social",
+  "description": "High-energy edits for short attention spans.",
+  "motif": "fast",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pacing",
+    "Under 1 s cuts"
+   ],
+   [
+    "Transitions",
+    "Whip pans, speed ramps"
+   ],
+   [
+    "Easing",
+    "Ease-in expo, 150–250 ms"
+   ],
+   [
+    "Typography",
+    "Heavy captions"
+   ],
+   [
+    "Colour treatment",
+    "High contrast, red flashes"
+   ],
+   [
+    "Captions",
+    "Word by word, large"
+   ],
+   [
+    "B-roll",
+    "Quick inserts"
+   ],
+   [
+    "Sound design",
+    "Beat-matched"
+   ],
+   [
+    "Aspect ratios",
+    "9:16"
+   ],
+   [
+    "Complexity",
+    "Medium"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Editorial Storytelling",
+  "description": "Magazine-like layouts with photography and pull quotes.",
+  "motif": "edit",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pacing",
+    "Calm"
+   ],
+   [
+    "Transitions",
+    "Page-turn slides, crops"
+   ],
+   [
+    "Easing",
+    "Ease-in-out sine, 700 ms"
+   ],
+   [
+    "Typography",
+    "Display headline, small caps labels"
+   ],
+   [
+    "Colour treatment",
+    "Paper white, ink, red rule"
+   ],
+   [
+    "Captions",
+    "Pull-quote style"
+   ],
+   [
+    "B-roll",
+    "Stills and portraits"
+   ],
+   [
+    "Sound design",
+    "Minimal piano"
+   ],
+   [
+    "Aspect ratios",
+    "4:5, 16:9"
+   ],
+   [
+    "Complexity",
+    "Medium"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Typography-Led",
+  "description": "Large, slow-moving type compositions for statements.",
+  "motif": "typeled",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Pacing",
+    "Slow"
+   ],
+   [
+    "Transitions",
+    "Hard cuts between compositions"
+   ],
+   [
+    "Easing",
+    "Ease-out quad, 500 ms"
+   ],
+   [
+    "Typography",
+    "One family, extreme size contrast"
+   ],
+   [
+    "Colour treatment",
+    "Monochrome plus red"
+   ],
+   [
+    "Captions",
+    "Type is the content"
+   ],
+   [
+    "B-roll",
+    "None"
+   ],
+   [
+    "Sound design",
+    "Quiet bed"
+   ],
+   [
+    "Aspect ratios",
+    "1:1, 9:16"
+   ],
+   [
+    "Complexity",
+    "Low"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Product Demonstrations",
+  "description": "Feature-by-feature showcases of ABET tools and accounts.",
+  "motif": "product",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pacing",
+    "Medium"
+   ],
+   [
+    "Transitions",
+    "Device pushes, callout lines"
+   ],
+   [
+    "Easing",
+    "Ease-in-out cubic, 500 ms"
+   ],
+   [
+    "Typography",
+    "Feature titles, spec labels"
+   ],
+   [
+    "Colour treatment",
+    "Brand neutrals, red callouts"
+   ],
+   [
+    "Captions",
+    "Feature captions"
+   ],
+   [
+    "B-roll",
+    "Device mock-ups, UI"
+   ],
+   [
+    "Sound design",
+    "Product clicks"
+   ],
+   [
+    "Aspect ratios",
+    "16:9, 9:16"
+   ],
+   [
+    "Complexity",
+    "Medium"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Premium Brand Storytelling",
+  "description": "The ABET story with a cinematic, values-led tone.",
+  "motif": "brand",
+  "complexity": "High",
+  "spec": [
+   [
+    "Pacing",
+    "Measured"
+   ],
+   [
+    "Transitions",
+    "Slow dissolves"
+   ],
+   [
+    "Easing",
+    "Ease-in-out sine, 900 ms"
+   ],
+   [
+    "Typography",
+    "Space Grotesk display, wide tracking"
+   ],
+   [
+    "Colour treatment",
+    "Ink, deep red, warm highlights"
+   ],
+   [
+    "Captions",
+    "Sparse"
+   ],
+   [
+    "B-roll",
+    "People, cities, markets"
+   ],
+   [
+    "Sound design",
+    "Ambient score"
+   ],
+   [
+    "Aspect ratios",
+    "16:9, 9:16"
+   ],
+   [
+    "Complexity",
+    "High"
+   ]
+  ]
+ },
+ {
+  "category": "video",
+  "name": "Interview Cutdowns",
+  "description": "Expert interviews cut into short, quotable clips.",
+  "motif": "interview",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Pacing",
+    "Conversational"
+   ],
+   [
+    "Transitions",
+    "Cuts on sentence breaks"
+   ],
+   [
+    "Easing",
+    "Ease-out quad, 300 ms"
+   ],
+   [
+    "Typography",
+    "Name and title lower thirds"
+   ],
+   [
+    "Colour treatment",
+    "Natural grade"
+   ],
+   [
+    "Captions",
+    "Sentence captions"
+   ],
+   [
+    "B-roll",
+    "Topic cutaways"
+   ],
+   [
+    "Sound design",
+    "Voice, room tone"
+   ],
+   [
+    "Aspect ratios",
+    "9:16, 1:1, 16:9"
+   ],
+   [
+    "Complexity",
+    "Low"
+   ]
+  ]
+ },
+ {
+  "category": "motion",
+  "name": "Minimal Kinetic Type",
+  "description": "Restrained word animation that follows the voice.",
+  "motif": "type",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Timing",
+    "Words land on stressed syllables"
+   ],
+   [
+    "Easing",
+    "Ease-out cubic, 300 ms"
+   ],
+   [
+    "Entry",
+    "Rise 12 px + fade"
+   ],
+   [
+    "Exit",
+    "Fade 200 ms"
+   ],
+   [
+    "Layout",
+    "Centred, max two lines"
+   ],
+   [
+    "Sound sync",
+    "Voice-led"
+   ]
+  ]
+ },
+ {
+  "category": "motion",
+  "name": "Premium Corporate Motion",
+  "description": "Calm panels and lower thirds for company content.",
+  "motif": "corp",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Timing",
+    "Hold 2–3 s per panel"
+   ],
+   [
+    "Easing",
+    "Ease-in-out quad, 450 ms"
+   ],
+   [
+    "Entry",
+    "Slide from left 24 px"
+   ],
+   [
+    "Exit",
+    "Slide out, fade"
+   ],
+   [
+    "Layout",
+    "12-column grid, left aligned"
+   ],
+   [
+    "Sound sync",
+    "Light bed, no hits"
+   ]
+  ]
+ },
+ {
+  "category": "motion",
+  "name": "Financial Chart Animation",
+  "description": "Candles and lines that draw on with annotations.",
+  "motif": "chart",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Timing",
+    "Line draws over 1.2 s"
+   ],
+   [
+    "Easing",
+    "Ease-out cubic"
+   ],
+   [
+    "Entry",
+    "Stroke draw-on"
+   ],
+   [
+    "Exit",
+    "Dim to 30 %"
+   ],
+   [
+    "Layout",
+    "Chart 70 %, label 30 %"
+   ],
+   [
+    "Sound sync",
+    "Tick on each annotation"
+   ]
+  ]
+ },
+ {
+  "category": "motion",
+  "name": "UI Motion Graphics",
+  "description": "Interface cards and screens that slide and stack.",
+  "motif": "ui",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Timing",
+    "350–500 ms per move"
+   ],
+   [
+    "Easing",
+    "Ease-out quint"
+   ],
+   [
+    "Entry",
+    "Scale 0.96 → 1 + fade"
+   ],
+   [
+    "Exit",
+    "Push behind, blur 0"
+   ],
+   [
+    "Layout",
+    "Centred device or card stack"
+   ],
+   [
+    "Sound sync",
+    "Soft clicks"
+   ]
+  ]
+ },
+ {
+  "category": "motion",
+  "name": "Animated Information Cards",
+  "description": "Facts presented as cards with icons.",
+  "motif": "mg",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Timing",
+    "2 s per card"
+   ],
+   [
+    "Easing",
+    "Ease-in-out cubic, 500 ms"
+   ],
+   [
+    "Entry",
+    "Card flips up 16 px"
+   ],
+   [
+    "Exit",
+    "Card slides left"
+   ],
+   [
+    "Layout",
+    "One card centred"
+   ],
+   [
+    "Sound sync",
+    "Pop per card"
+   ]
+  ]
+ },
+ {
+  "category": "motion",
+  "name": "Mask Reveals",
+  "description": "Clean geometric masks reveal type and footage.",
+  "motif": "fast",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Timing",
+    "400 ms reveals"
+   ],
+   [
+    "Easing",
+    "Ease-in-out expo"
+   ],
+   [
+    "Entry",
+    "Diagonal mask wipe"
+   ],
+   [
+    "Exit",
+    "Reverse wipe"
+   ],
+   [
+    "Layout",
+    "Full-bleed"
+   ],
+   [
+    "Sound sync",
+    "Whoosh on wipe"
+   ]
+  ]
+ },
+ {
+  "category": "motion",
+  "name": "Animated Infographics",
+  "description": "Bars, counters and maps that build in sequence.",
+  "motif": "data",
+  "complexity": "High",
+  "spec": [
+   [
+    "Timing",
+    "Count-up 800 ms"
+   ],
+   [
+    "Easing",
+    "Ease-out cubic"
+   ],
+   [
+    "Entry",
+    "Bars grow from baseline"
+   ],
+   [
+    "Exit",
+    "Fade"
+   ],
+   [
+    "Layout",
+    "Title top, data centre, source bottom"
+   ],
+   [
+    "Sound sync",
+    "Swell on reveal"
+   ]
+  ]
+ },
+ {
+  "category": "motion",
+  "name": "Clean Lower Thirds",
+  "description": "Name and title bars for interviews and webinars.",
+  "motif": "interview",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Timing",
+    "On for 4 s"
+   ],
+   [
+    "Easing",
+    "Ease-out quad, 300 ms"
+   ],
+   [
+    "Entry",
+    "Bar extends from left"
+   ],
+   [
+    "Exit",
+    "Bar retracts"
+   ],
+   [
+    "Layout",
+    "Bottom-left safe area"
+   ],
+   [
+    "Sound sync",
+    "None"
+   ]
+  ]
+ },
+ {
+  "category": "graphic",
+  "name": "Clean Editorial Post",
+  "description": "Headline, short body and a strong visual.",
+  "motif": "post",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Layout",
+    "Headline top, visual centre, CTA bottom"
+   ],
+   [
+    "Typography",
+    "Space Grotesk headline, Poppins body"
+   ],
+   [
+    "Colour",
+    "White or ink background, red accent"
+   ],
+   [
+    "Imagery",
+    "Product UI or abstract market visuals"
+   ],
+   [
+    "Sizes",
+    "1:1, 4:5"
+   ],
+   [
+    "Footer",
+    "Short risk warning"
+   ]
+  ]
+ },
+ {
+  "category": "graphic",
+  "name": "Bold Statement",
+  "description": "One big sentence for awareness posts.",
+  "motif": "typeled",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Layout",
+    "Centred statement"
+   ],
+   [
+    "Typography",
+    "Space Grotesk 700, tight leading"
+   ],
+   [
+    "Colour",
+    "Ink background, red keyword"
+   ],
+   [
+    "Imagery",
+    "None"
+   ],
+   [
+    "Sizes",
+    "1:1, 4:5, 9:16"
+   ],
+   [
+    "Footer",
+    "Short risk warning"
+   ]
+  ]
+ },
+ {
+  "category": "graphic",
+  "name": "Step-by-Step Carousel",
+  "description": "Numbered slides that teach one idea.",
+  "motif": "carousel",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Layout",
+    "Cover, 3–8 steps, recap, CTA"
+   ],
+   [
+    "Typography",
+    "Step number + headline + 2 lines"
+   ],
+   [
+    "Colour",
+    "Alternating white and ink slides"
+   ],
+   [
+    "Imagery",
+    "Icons and simple diagrams"
+   ],
+   [
+    "Sizes",
+    "4:5"
+   ],
+   [
+    "Footer",
+    "Risk warning on last slide"
+   ]
+  ]
+ },
+ {
+  "category": "graphic",
+  "name": "Market Hours Infographic",
+  "description": "Sessions, times and key facts at a glance.",
+  "motif": "data",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Layout",
+    "Timeline or grid"
+   ],
+   [
+    "Typography",
+    "Space Grotesk numbers"
+   ],
+   [
+    "Colour",
+    "Ink with red highlights"
+   ],
+   [
+    "Imagery",
+    "Map or clock graphics"
+   ],
+   [
+    "Sizes",
+    "4:5, A4"
+   ],
+   [
+    "Footer",
+    "Source and date line"
+   ]
+  ]
+ },
+ {
+  "category": "graphic",
+  "name": "YouTube Thumbnail",
+  "description": "Readable at small size, one face, three words.",
+  "motif": "edit",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Layout",
+    "Face right, words left"
+   ],
+   [
+    "Typography",
+    "Max three words, heavy weight"
+   ],
+   [
+    "Colour",
+    "High contrast, red accent"
+   ],
+   [
+    "Imagery",
+    "Presenter cut-out"
+   ],
+   [
+    "Sizes",
+    "16:9"
+   ],
+   [
+    "Footer",
+    "None"
+   ]
+  ]
+ },
+ {
+  "category": "ad",
+  "name": "Demo Account Offer",
+  "description": "Invites people to practise on an MT5 demo.",
+  "motif": "ad",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Hook",
+    "Practise first, no real funds"
+   ],
+   [
+    "Format",
+    "9:16 video and 1:1 static"
+   ],
+   [
+    "CTA",
+    "Open a demo account"
+   ],
+   [
+    "Variants",
+    "3 headlines × 2 visuals"
+   ],
+   [
+    "Compliance",
+    "Risk warning on frame and in copy"
+   ],
+   [
+    "Platforms",
+    "Meta, YouTube"
+   ]
+  ]
+ },
+ {
+  "category": "ad",
+  "name": "Platform Feature",
+  "description": "Shows one MT5 or account feature clearly.",
+  "motif": "product",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Hook",
+    "Feature in the first second"
+   ],
+   [
+    "Format",
+    "16:9 and 9:16"
+   ],
+   [
+    "CTA",
+    "Explore MT5"
+   ],
+   [
+    "Variants",
+    "2 features × 2 hooks"
+   ],
+   [
+    "Compliance",
+    "No performance claims"
+   ],
+   [
+    "Platforms",
+    "YouTube, LinkedIn, Meta"
+   ]
+  ]
+ },
+ {
+  "category": "ad",
+  "name": "Education Lead Magnet",
+  "description": "Promotes a free guide or checklist.",
+  "motif": "pdfdoc",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Hook",
+    "The question the guide answers"
+   ],
+   [
+    "Format",
+    "1:1 static, 9:16 video"
+   ],
+   [
+    "CTA",
+    "Download the free guide"
+   ],
+   [
+    "Variants",
+    "3 cover styles"
+   ],
+   [
+    "Compliance",
+    "Educational framing only"
+   ],
+   [
+    "Platforms",
+    "Meta, LinkedIn"
+   ]
+  ]
+ },
+ {
+  "category": "ad",
+  "name": "Retargeting Reminder",
+  "description": "A short reminder for people who visited the site.",
+  "motif": "ui",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Hook",
+    "Pick up where you left off"
+   ],
+   [
+    "Format",
+    "1:1, 9:16"
+   ],
+   [
+    "CTA",
+    "Finish opening your demo"
+   ],
+   [
+    "Variants",
+    "2"
+   ],
+   [
+    "Compliance",
+    "Frequency cap, risk warning"
+   ],
+   [
+    "Platforms",
+    "Meta"
+   ]
+  ]
+ },
+ {
+  "category": "ad",
+  "name": "Brand Trust",
+  "description": "Registration, support and global reach, stated factually.",
+  "motif": "brand",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Hook",
+    "Who ABET is, in one line"
+   ],
+   [
+    "Format",
+    "16:9, 9:16"
+   ],
+   [
+    "CTA",
+    "Learn about ABET"
+   ],
+   [
+    "Variants",
+    "2"
+   ],
+   [
+    "Compliance",
+    "Only verified facts: Anguilla registration, 125+ countries served (site claim)"
+   ],
+   [
+    "Platforms",
+    "YouTube, LinkedIn"
+   ]
+  ]
+ },
+ {
+  "category": "pdf",
+  "name": "Beginner Guide",
+  "description": "Cover, contents, chapters and a glossary.",
+  "motif": "pdfdoc",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pages",
+    "12–30"
+   ],
+   [
+    "Cover",
+    "Ink cover, red rule, logo top-left"
+   ],
+   [
+    "Body",
+    "Poppins 10.5 pt, Space Grotesk headings"
+   ],
+   [
+    "Elements",
+    "Callouts, glossary boxes, diagrams"
+   ],
+   [
+    "Footer",
+    "Page number, registration line"
+   ],
+   [
+    "Last page",
+    "Full risk warning"
+   ]
+  ]
+ },
+ {
+  "category": "pdf",
+  "name": "Checklist",
+  "description": "One-page or two-page practical checklist.",
+  "motif": "pdfcheck",
+  "complexity": "Low",
+  "spec": [
+   [
+    "Pages",
+    "1–2"
+   ],
+   [
+    "Cover",
+    "None, title band"
+   ],
+   [
+    "Body",
+    "Checkbox list in two columns"
+   ],
+   [
+    "Elements",
+    "Section labels, tips"
+   ],
+   [
+    "Footer",
+    "Registration line"
+   ],
+   [
+    "Last page",
+    "Short risk warning"
+   ]
+  ]
+ },
+ {
+  "category": "pdf",
+  "name": "E-book",
+  "description": "Long-form, chapter-based reading experience.",
+  "motif": "edit",
+  "complexity": "High",
+  "spec": [
+   [
+    "Pages",
+    "20–40"
+   ],
+   [
+    "Cover",
+    "Full-bleed visual, title"
+   ],
+   [
+    "Body",
+    "Single column, generous margins"
+   ],
+   [
+    "Elements",
+    "Pull quotes, chapter openers"
+   ],
+   [
+    "Footer",
+    "Chapter name, page number"
+   ],
+   [
+    "Last page",
+    "Full risk warning"
+   ]
+  ]
+ },
+ {
+  "category": "pdf",
+  "name": "Brochure",
+  "description": "Account types and services overview.",
+  "motif": "corp",
+  "complexity": "Medium",
+  "spec": [
+   [
+    "Pages",
+    "4–8"
+   ],
+   [
+    "Cover",
+    "Logo, headline, MT5 visual"
+   ],
+   [
+    "Body",
+    "Two-column grid"
+   ],
+   [
+    "Elements",
+    "Account comparison table"
+   ],
+   [
+    "Footer",
+    "Registration line"
+   ],
+   [
+    "Last page",
+    "Full risk warning, contact details"
+   ]
+  ]
+ }
+]

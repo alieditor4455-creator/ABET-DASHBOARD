@@ -2,12 +2,9 @@
 \set ON_ERROR_STOP 0
 \pset footer off
 
--- Users: first sign-up becomes super admin, later ones are viewers.
+-- First sign-up becomes the super admin.
 insert into auth.users (id, email, raw_user_meta_data) values
-  ('00000000-0000-0000-0000-000000000001','lead@abet.test','{"full_name":"Marketing Lead"}'),
-  ('00000000-0000-0000-0000-000000000002','writer@abet.test','{"full_name":"Hira K."}'),
-  ('00000000-0000-0000-0000-000000000003','compliance@abet.test','{"full_name":"Mariam Q."}'),
-  ('00000000-0000-0000-0000-000000000004','viewer@abet.test','{"full_name":"Guest"}');
+  ('00000000-0000-0000-0000-000000000001','lead@abet.test','{"full_name":"Marketing Lead"}');
 
 create or replace function pg_temp.as_user(u text) returns void language plpgsql as $$
 begin
@@ -29,10 +26,26 @@ end $$;
 select pg_temp.check('first user is super_admin',
   $q$ do $d$ begin if (select role from public.profiles where id='00000000-0000-0000-0000-000000000001') <> 'super_admin' then raise exception 'not super'; end if; end $d$ $q$, false);
 
--- Lead (super admin) assigns roles.
+-- Lead (super admin) invites two people, then they sign up. A third person signs up uninvited.
 select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
-select pg_temp.check('admin sets writer role', $q$ update public.profiles set role='scriptwriter' where id='00000000-0000-0000-0000-000000000002' $q$, false);
-select pg_temp.check('admin sets compliance role', $q$ update public.profiles set role='compliance_reviewer' where id='00000000-0000-0000-0000-000000000003' $q$, false);
+select pg_temp.check('admin invites writer', $q$ insert into public.invitations (email, role) values ('writer@abet.test','scriptwriter') $q$, false);
+select pg_temp.check('admin invites compliance', $q$ insert into public.invitations (email, role) values ('compliance@abet.test','compliance_reviewer') $q$, false);
+reset role;
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-000000000002','Writer@abet.test','{"full_name":"Hira K."}'),
+  ('00000000-0000-0000-0000-000000000003','compliance@abet.test','{"full_name":"Mariam Q."}'),
+  ('00000000-0000-0000-0000-000000000004','stranger@example.com','{"full_name":"Stranger"}');
+select pg_temp.check('invited writer is active scriptwriter',
+  $q$ do $d$ begin if (select role::text||active::text from public.profiles where id='00000000-0000-0000-0000-000000000002') <> 'scriptwritertrue' then raise exception 'wrong'; end if; end $d$ $q$, false);
+select pg_temp.check('uninvited sign-up is inactive',
+  $q$ do $d$ begin if (select active from public.profiles where id='00000000-0000-0000-0000-000000000004') then raise exception 'active'; end if; end $d$ $q$, false);
+
+select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
+select pg_temp.check('inactive user sees no content or team', $q$ do $d$ begin if (select count(*) from public.profiles) + (select count(*) from public.styles) <> 0 then raise exception 'leak'; end if; end $d$ $q$, false);
+select pg_temp.check('inactive user cannot invite', $q$ insert into public.invitations (email, role) values ('x@y.z','admin') $q$, true);
+reset role;
+
+select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
 select pg_temp.check('admin cannot change own role', $q$ update public.profiles set role='viewer' where id='00000000-0000-0000-0000-000000000001' $q$, true);
 
 -- Writer creates and drafts content.
@@ -59,7 +72,8 @@ reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000001');
 select pg_temp.check('lead schedules approved item', $q$ update public.content_items set scheduled_at=now()+interval '1 day', status='completed' where id='10000000-0000-0000-0000-000000000001' $q$, false);
 
--- Viewer can read but not write.
+-- Lead activates the stranger as a viewer: they can read but not write.
+select pg_temp.check('admin activates pending user', $q$ update public.profiles set active=true where id='00000000-0000-0000-0000-000000000004' $q$, false);
 reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-000000000004');
 select pg_temp.check('viewer cannot create', $q$ insert into public.content_items (title,type,owner_id) values ('x','reel','00000000-0000-0000-0000-000000000004') $q$, true);

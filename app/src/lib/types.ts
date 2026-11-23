@@ -1,0 +1,54 @@
+export type Role =
+  | 'super_admin' | 'admin' | 'marketing_manager' | 'content_strategist' | 'scriptwriter'
+  | 'video_editor' | 'motion_designer' | 'graphic_designer' | 'social_media_manager'
+  | 'compliance_reviewer' | 'viewer';
+
+export type Permission =
+  | 'content.create' | 'content.edit_any' | 'content.approve' | 'content.compliance'
+  | 'content.publish' | 'styles.manage' | 'team.manage' | 'settings.manage';
+
+export type ContentType = 'reel' | 'yt' | 'explainer' | 'motion' | 'graphic' | 'carousel' | 'poster' | 'ad' | 'pdf';
+export type Status = 'draft' | 'in_production' | 'in_review' | 'approved' | 'completed';
+export type StyleCategory = 'video' | 'motion' | 'graphic' | 'ad' | 'pdf';
+export type Platform = 'IG' | 'FB' | 'YT' | 'TT' | 'LI' | 'X';
+
+export interface Profile { id: string; full_name: string; role: Role; active: boolean; created_at?: string }
+export interface Invitation { email: string; role: Role; created_at: string; accepted_at: string | null }
+
+export interface Style {
+  id: string; category: StyleCategory; name: string; description: string; motif: string;
+  complexity: 'Low' | 'Medium' | 'High'; spec: [string, string][]; is_custom: boolean; archived: boolean;
+}
+
+export interface ContentItem {
+  id: string; title: string; topic: string; type: ContentType; style_id: string | null;
+  owner_id: string; status: Status; platforms: Platform[]; scheduled_at: string | null; published_at: string | null;
+  compliance_note: string | null; audience: string | null; objective: string | null;
+  created_by: string; created_at: string; updated_at: string;
+}
+
+export interface ScriptUnit { label: string; tc: string; vo: string; on: string; vis: string }
+export interface Script {
+  id: string; item_id: string; version: number; title: string; length_label: string | null;
+  units: ScriptUnit[]; source: 'manual' | 'claude'; approved_by: string | null; approved_at: string | null;
+  created_by: string; created_at: string;
+}
+
+export interface Caption { item_id: string; platform: Platform; body: string }
+
+export interface Asset {
+  id: string; item_id: string | null; name: string; kind: 'Video' | 'Graphic' | 'PDF' | 'Reference';
+  storage_path: string; size_bytes: number; state: 'ready' | 'published' | 'archived';
+  backup_verified: boolean; created_by: string; created_at: string;
+}
+
+export interface Activity { id: number; item_id: string | null; actor_id: string | null; via: 'app' | 'claude' | 'system'; message: string; created_at: string }
+
+export interface Settings {
+  storage_limit_gb: number; temp_cleanup_days: number; auto_captions: boolean;
+  auto_calendar_suggestions: boolean; notify_on_ready: boolean;
+}
+
+export interface SocialConnection { platform: Platform; handle: string; status: 'not_connected' | 'connected' | 'error' | 'pending_review' }
+
+export interface Session { userId: string; email: string }
