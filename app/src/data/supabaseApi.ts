@@ -1,0 +1,131 @@
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Api, ItemPatch, NewItem, NewScript, Snapshot } from './api';
+import type { Asset, Caption, ContentItem, Platform, Profile, Role, Script, Session, Settings, Style } from '../lib/types';
+
+const BUCKET = 'content';
+
+export function createSupabaseApi(url: string, key: string): Api {
+  const sb: SupabaseClient = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } });
+  let uid: string | null = null;
+
+  const ok = <T,>(r: { data: T | null; error: { message: string } | null }): T => {
+    if (r.error) throw new Error(r.error.message);
+    return r.data as T;
+  };
+  const toSession = (s: { user: { id: string; email?: string } } | null): Session | null =>
+    s ? { userId: s.user.id, email: s.user.email ?? '' } : null;
+
+  const api: Api = {
+    mode: 'supabase',
+    async getSession() {
+      const { data } = await sb.auth.getSession();
+      const s = toSession(data.session);
+      uid = s?.userId ?? null;
+      return s;
+    },
+    onAuth(cb) {
+      const { data } = sb.auth.onAuthStateChange((_e, s) => { const x = toSession(s); uid = x?.userId ?? null; cb(x); });
+      return () => data.subscription.unsubscribe();
+    },
+    async signIn(email, password) {
+      const r = await sb.auth.signInWithPassword({ email, password });
+      if (r.error) throw new Error(r.error.message);
+    },
+    async signUp(email, password, fullName) {
+      const r = await sb.auth.signUp({ email, password, options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin } });
+      if (r.error) throw new Error(r.error.message);
+      return { needsConfirm: !r.data.session };
+    },
+    async resetPassword(email) { ok(await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })); },
+    async signOut() { await sb.auth.signOut(); uid = null; },
+    async myProfile() {
+      const r = await sb.rpc('my_profile');
+      if (r.error) throw new Error(r.error.message);
+      return (r.data as Profile | null) ?? null;
+    },
+
+    async loadAll(): Promise<Snapshot> {
+      const [profiles, styles, items, activity, settings, social, invitations] = await Promise.all([
+        sb.from('profiles').select('*').order('created_at'),
+        sb.from('styles').select('*').eq('archived', false).order('category').order('created_at'),
+        sb.from('content_items').select('*').order('updated_at', { ascending: false }),
+        sb.from('activity').select('*').order('created_at', { ascending: false }).limit(40),
+        sb.from('app_settings').select('*').single(),
+        sb.from('social_connections').select('*'),
+        sb.from('invitations').select('*').order('created_at', { ascending: false }),
+      ]);
+      return {
+        profiles: ok(profiles) as Profile[], styles: ok(styles) as Style[], items: ok(items) as ContentItem[],
+        activity: ok(activity) as Snapshot['activity'], settings: ok(settings) as Settings,
+        social: ok(social) as Snapshot['social'], invitations: (invitations.data ?? []) as Snapshot['invitations'],
+      };
+    },
+    async createItem(n: NewItem) {
+      const row = { ...n, owner_id: uid, created_by: uid };
+      const item = ok(await sb.from('content_items').insert(row).select().single()) as ContentItem;
+      await api.log(`created “${item.title}”`, item.id);
+      return item;
+    },
+    async updateItem(id: string, patch: ItemPatch) {
+      return ok(await sb.from('content_items').update(patch).eq('id', id).select().single()) as ContentItem;
+    },
+    async deleteItem(id) { ok(await sb.from('content_items').delete().eq('id', id)); },
+
+    async listScripts(itemId) { return ok(await sb.from('scripts').select('*').eq('item_id', itemId).order('version', { ascending: false })) as Script[]; },
+    async saveScript(itemId, s: NewScript) {
+      const last = ok(await sb.from('scripts').select('version').eq('item_id', itemId).order('version', { ascending: false }).limit(1)) as { version: number }[];
+      const version = (last[0]?.version ?? 0) + 1;
+      const row = { item_id: itemId, version, title: s.title, length_label: s.length_label, units: s.units, source: s.source, created_by: uid };
+      const saved = ok(await sb.from('scripts').insert(row).select().single()) as Script;
+      await api.log(`saved script version ${version}`, itemId);
+      return saved;
+    },
+    async approveScript(scriptId) { ok(await sb.from('scripts').update({ approved_by: uid, approved_at: new Date().toISOString() }).eq('id', scriptId)); },
+
+    async listCaptions(itemId) { return ok(await sb.from('captions').select('*').eq('item_id', itemId)) as Caption[]; },
+    async saveCaption(itemId, platform: Platform, body) {
+      ok(await sb.from('captions').upsert({ item_id: itemId, platform, body, updated_at: new Date().toISOString() }));
+    },
+
+    async listAssets() { return ok(await sb.from('assets').select('*').order('created_at', { ascending: false })) as Asset[]; },
+    async uploadAsset(file, itemId, kind) {
+      const safe = file.name.replace(/[^\w.\-]+/g, '_').slice(-80);
+      const path = `${itemId ?? 'library'}/${Date.now()}_${safe}`;
+      ok(await sb.storage.from(BUCKET).upload(path, file, { contentType: file.type || undefined, upsert: false }));
+      const asset = ok(await sb.from('assets').insert({
+        item_id: itemId, name: file.name, kind, storage_path: path, size_bytes: file.size, created_by: uid,
+        backup_verified: false,
+      }).select().single()) as Asset;
+      await api.log(`uploaded ${file.name}`, itemId);
+      return asset;
+    },
+    async updateAsset(id, patch) { ok(await sb.from('assets').update(patch).eq('id', id)); },
+    async assetUrl(a) {
+      const r = await sb.storage.from(BUCKET).createSignedUrl(a.storage_path, 60 * 30);
+      if (r.error) throw new Error(r.error.message);
+      return r.data.signedUrl;
+    },
+
+    async saveStyle(s) {
+      const row = { ...s, created_by: s.id ? undefined : uid };
+      if (s.id) return ok(await sb.from('styles').update(row).eq('id', s.id).select().single()) as Style;
+      return ok(await sb.from('styles').insert(row).select().single()) as Style;
+    },
+    async updateProfile(id, patch) { ok(await sb.from('profiles').update(patch).eq('id', id)); },
+    async invite(email, role: Role) { ok(await sb.from('invitations').upsert({ email: email.trim().toLowerCase(), role, invited_by: uid })); },
+    async revokeInvite(email) { ok(await sb.from('invitations').delete().eq('email', email)); },
+    async updateSettings(patch) { ok(await sb.from('app_settings').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', true)); },
+    async updateSocial(platform, patch) { ok(await sb.from('social_connections').update({ ...patch, updated_at: new Date().toISOString() }).eq('platform', platform)); },
+    async addApproval(itemId, kind, decision, note) { ok(await sb.from('approvals').insert({ item_id: itemId, kind, decision, note: note ?? null, decided_by: uid })); },
+    async log(message, itemId = null) {
+      const r = await sb.from('activity').insert({ message, item_id: itemId, actor_id: uid, via: 'app' });
+      if (r.error) console.warn('activity log failed', r.error.message);
+    },
+    async health() {
+      const db = await sb.from('app_settings').select('id').limit(1);
+      const st = await sb.storage.from(BUCKET).list('', { limit: 1 });
+      return { database: !db.error, storage: !st.error, detail: db.error?.message ?? st.error?.message };
+    },
+  };
+  return api;
+}
