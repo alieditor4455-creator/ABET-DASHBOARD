@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 400" role="img" aria-labelledby="trustComplianceTitle">
+  <title id="trustComplianceTitle">Trust, compliance, and global reach</title>
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1c1c"/>
+      <stop offset="100%" stop-color="#3a3a3a"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ae1818"/>
+      <stop offset="100%" stop-color="#d42828"/>
+    </linearGradient>
+  </defs>
+  <rect width="560" height="400" rx="20" fill="#f4f5f7"/>
+  <!-- Globe outline -->
+  <g opacity="0.35" fill="none" stroke="#ae1818" stroke-width="2">
+    <ellipse cx="280" cy="200" rx="168" ry="168"/>
+    <ellipse cx="280" cy="200" rx="70" ry="168"/>
+    <path d="M112 200h336M280 32v336"/>
+    <path d="M140 120q70 40 140 40t140-40M140 280q70-40 140-40t140 40"/>
+  </g>
+  <!-- Shield -->
+  <path d="M280 48 L420 112 V228 Q420 310 280 352 Q140 310 140 228 V112 Z" fill="url(#shieldGrad)"/>
+  <path d="M280 76 L388 128 V218 Q388 288 280 322 Q172 288 172 218 V128 Z" fill="#ffffff" opacity="0.08"/>
+  <!-- Check mark -->
+  <path d="M220 200 L258 238 L340 158" fill="none" stroke="url(#accentGrad)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Document / compliance strip -->
+  <rect x="88" y="288" width="384" height="56" rx="8" fill="#ffffff" stroke="#e0e0e0" stroke-width="1"/>
+  <rect x="108" y="308" width="120" height="8" rx="2" fill="#ae1818" opacity="0.35"/>
+  <rect x="108" y="322" width="200" height="6" rx="2" fill="#bdbdbd"/>
+  <rect x="108" y="332" width="160" height="6" rx="2" fill="#d0d0d0"/>
+  <circle cx="472" cy="316" r="18" fill="#ae1818" opacity="0.15"/>
+  <path d="M464 316l6 6 14-14" fill="none" stroke="#ae1818" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

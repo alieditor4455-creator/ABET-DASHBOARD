@@ -1,16 +1,45 @@
 # ABET Content OS
 
-The AI-powered content operating system for ABET Global (planned at `app.abetglobal.com`).
+The AI-powered content operating system for ABET Global, planned for `app.abetglobal.com`.
 
-## Status
+## Status: design preview (v2)
 
-**Phase 0: design preview.** `design/abet-content-os-preview.html` is a self-contained, clickable design preview. Open it in a browser. It has no backend, and every person, content item and count in it is sample data.
+`design/abet-content-os-preview.html` is a self-contained, clickable preview. Open it in any browser, on desktop or phone. **It has no backend.** All content, people and numbers in it are sample data, and a "Preview · sample data" label says so in the top bar.
 
-Screens designed so far: Dashboard, Content Ideas, Production Board (Board and Table views), Content Calendar (Month and List views), Video Editing Styles (with a detail drawer). Every other sidebar page shows its planned scope and build phase.
+What works in the preview:
 
-## Brand basis (taken from abetglobal.com)
+- **Main journey:** Content Studio → choose a format → enter a topic → script (template-generated, with a live compliance check) → choose a style → generate (simulated job progress, clearly labelled) → preview and approve → publish or schedule with per-platform captions and character limits.
+- **Dashboard:** four status cards, recent projects, upcoming content, production activity, and renders in progress. All of it is computed from the same in-memory data.
+- **Production:** a five-column Kanban (Draft, Generating, In Review, Approved, Completed) and a list view. Drag-and-drop follows the rules: you can't approve with an open compliance note, and you can't complete without approval.
+- **Content Calendar:** month and week views, filters, drag to reschedule, and suggestions for approved but unscheduled content.
+- **Creative Styles:** 45 styles across video, motion, graphic, ad and PDF categories. Specs open in an expandable panel. You can edit and duplicate styles, and upload references.
+- **Asset Library:** tabs, a storage bar, and preview, reuse, publish and archive actions.
+- **Brand Kit:** official logos, colours, fonts, legal text and social handles, each marked "verified" or "needs confirmation".
+- **AI & Integrations:** "Test connection" really calls `/api/health/*`. In the preview it reports that the backend is unreachable.
+- **Admin Panel:** team and roles, permissions, social connections, storage rules and automation settings.
 
-- Primary red `#AE1818`, dark red `#8C1313`, ink `#191B22` / `#1E2229`
-- Fonts loaded by the site: Montserrat (headings), Mulish (UI text), Space Grotesk (numbers and data), plus Poppins
-- Logo: the bull-and-bear "A" mark (`/favicon.png` on the site)
-- Legal line: registered in Anguilla, registration no. A000000977, plus the CFD/leverage risk warning
+Not real yet: Claude API calls, rendering, storage, social publishing, authentication and persistence. Changes are lost when the page reloads.
+
+## Layout
+
+```
+brand/                  Official ABET assets from abetglobal.com (see brand/README.md)
+design/src/app.html     Preview source (HTML, CSS and JS in one file)
+design/build.py         Inlines brand images and writes the standalone preview
+design/abet-content-os-preview.html   Built preview (open this)
+```
+
+Rebuild after editing the source:
+
+```
+python3 design/build.py
+```
+
+## Design system
+
+- **Look:** a soft neutral canvas with white panels. The navigation active state is ink, and ABET Red is reserved for primary actions and the most important highlights.
+- **Spacing:** 8 px scale (4, 8, 12, 16, 24, 32, 40, 48).
+- **Corner radii:** 6, 8, 12, 16, 20 px.
+- **Typography:** Space Grotesk for headings and Poppins for UI text, both taken from abetglobal.com.
+- **Status colours (UI only):** Draft grey, Generating blue, In Review amber, Approved green, Completed ink.
+- **Themes:** light by default, with a full dark theme, and reduced motion is respected.
