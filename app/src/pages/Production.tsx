@@ -50,7 +50,7 @@ export function Production() {
             <table className="tbl"><thead><tr><th>Content</th><th>Type</th><th>Style</th><th>Owner</th><th>Status</th><th>Last updated</th></tr></thead><tbody>
               {[...list].sort((a, b) => STATUSES.indexOf(a.status) - STATUSES.indexOf(b.status) || b.updated_at.localeCompare(a.updated_at)).map((i) => (
                 <tr key={i.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/studio/${i.id}`)}>
-                  <td className="tt">{i.title}{i.compliance_note && <> <Chip cls="st-warn" icon="alert">Compliance</Chip></>}</td>
+                  <td className="tt">{i.title}{i.compliance_note && <> <Chip cls="st-warn" icon="alert">Compliance</Chip></>}{i.needs_script && <> <Chip cls="st-Generating" icon="sparkles">Claude queue</Chip></>}</td>
                   <td><span className="type-line"><Icon name={TYPES[i.type].icon} size={15} />{TYPES[i.type].name}</span></td>
                   <td className="muted">{styleName(i.style_id)}</td>
                   <td><span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}><Avatar profile={person(i.owner_id)} />{person(i.owner_id)?.full_name}</span></td>
@@ -74,6 +74,7 @@ export function Production() {
                       <div className="ktop"><StatusChip status={i.status} label={label(i)} /></div>
                       <div className="kl"><span className="kt">{i.title}</span><span className="type-line"><Icon name={TYPES[i.type].icon} size={15} />{TYPES[i.type].name}</span><span className="type-line"><Icon name="palette" size={15} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{styleName(i.style_id)}</span></span></div>
                       {i.compliance_note && <Chip cls="st-warn" icon="alert">Compliance note</Chip>}
+                      {i.needs_script && <Chip cls="st-Generating" icon="sparkles">Claude queue</Chip>}
                       <div className="kf"><Avatar profile={person(i.owner_id)} /><span className="upd"><Icon name="clock" size={13} />{ago(i.updated_at)}</span></div>
                     </div>
                   ))}

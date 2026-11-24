@@ -11,6 +11,8 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Robots-Tag = "noindex, nofollow"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://zgbzsnrumpcyzctvssxl.supabase.co; media-src 'self' blob: https://zgbzsnrumpcyzctvssxl.supabase.co; connect-src 'self' https://zgbzsnrumpcyzctvssxl.supabase.co wss://zgbzsnrumpcyzctvssxl.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 
 # Claude connector (MCP) functions live in app/netlify/functions.
 [functions]

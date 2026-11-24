@@ -4,7 +4,7 @@
  * database triggers so the app behaves the same way.
  */
 import type { Api, ItemPatch, NewItem, NewScript, Snapshot } from './api';
-import type { Activity, Asset, Caption, ContentItem, Invitation, Permission, Profile, Script, Session, Settings, SocialConnection, Style } from '../lib/types';
+import type { Activity, Asset, Caption, Comment, ContentItem, Invitation, Notification, Permission, Profile, Script, Session, Settings, SocialConnection, Style } from '../lib/types';
 import { ROLE_PERMS } from '../lib/constants';
 import { templateScript } from '../lib/script';
 import seedStyles from './styleSeed.json';
@@ -29,7 +29,7 @@ export function createDemoApi(): Api {
   const sid = (name: string) => styles.find((s) => s.name === name)?.id ?? null;
   const mk = (title: string, type: ContentItem['type'], style: string, owner: string, status: ContentItem['status'], upd: number, extra: Partial<ContentItem> = {}): ContentItem => ({
     id: uuid(), title, topic: title, type, style_id: sid(style), owner_id: owner, status, platforms: [], scheduled_at: null, published_at: null,
-    compliance_note: null, audience: 'Complete beginners', objective: 'Education', created_by: owner, created_at: minsAgo(upd + 600), updated_at: minsAgo(upd), ...extra,
+    compliance_note: null, audience: 'Complete beginners', objective: 'Education', needs_script: false, request_note: null, requested_by: null, created_by: owner, created_at: minsAgo(upd + 600), updated_at: minsAgo(upd), ...extra,
   });
   const items: ContentItem[] = [
     mk('What is a pip? In 30 seconds', 'reel', 'High-Retention Educational', 'demo-bt', 'completed', 180, { platforms: ['IG', 'TT'], scheduled_at: inDays(1, 18) }),
@@ -37,7 +37,7 @@ export function createDemoApi(): Api {
     mk('How leverage works, and how it works against you', 'explainer', 'Financial Chart Explainers', 'demo-zr', 'in_review', 12, { compliance_note: 'Risk warning missing on end card' }),
     mk('MT5 walkthrough: your first demo order', 'yt', 'Screen Recording Tutorials', 'demo-oa', 'in_production', 20),
     mk('Reading a candlestick in three steps', 'reel', 'Kinetic Typography', 'demo-oa', 'in_review', 95),
-    mk('Stop-loss basics for beginners', 'reel', 'Premium Minimalist', 'demo-hk', 'draft', 40),
+    mk('Stop-loss basics for beginners', 'reel', 'Premium Minimalist', 'demo-hk', 'draft', 40, { needs_script: true, request_note: 'Keep it under 45 seconds', requested_by: 'demo-hk' }),
     mk('Trading sessions: Tokyo, London, New York', 'poster', 'Market Hours Infographic', 'demo-sm', 'approved', 240),
     mk("Beginner's forex glossary", 'pdf', 'Beginner Guide', 'demo-sm', 'in_production', 5),
     mk('Try MT5 on a demo account', 'ad', 'Demo Account Offer', 'demo-oa', 'in_review', 25),
@@ -60,9 +60,14 @@ export function createDemoApi(): Api {
     { id: 1, item_id: null, actor_id: 'demo-sm', via: 'app', message: 'approved “Trading sessions: Tokyo, London, New York”', created_at: minsAgo(240) },
   ];
   let actId = 10;
-  let settings: Settings = { storage_limit_gb: 1, temp_cleanup_days: 30, auto_captions: true, auto_calendar_suggestions: true, notify_on_ready: true };
+  let settings: Settings = { last_backup_at: null, storage_limit_gb: 1, temp_cleanup_days: 30, auto_captions: true, auto_calendar_suggestions: true, notify_on_ready: true };
   const social: SocialConnection[] = (['IG', 'FB', 'YT', 'TT', 'LI', 'X'] as const).map((p) => ({ platform: p, handle: p, status: 'not_connected' }));
   const invitations: Invitation[] = [];
+  const comments: Comment[] = [];
+  const notifications: Notification[] = [
+    { id: 2, user_id: me.id, item_id: null, kind: 'review', message: '“Reading a candlestick in three steps” is ready for review', read_at: null, created_at: minsAgo(95) },
+    { id: 1, user_id: me.id, item_id: null, kind: 'comment', message: 'Hira K. commented on “Stop-loss basics for beginners”', read_at: minsAgo(30), created_at: minsAgo(40) },
+  ];
   let session: Session | null = { userId: me.id, email: 'demo@abet.local' };
   const listeners = new Set<(s: Session | null) => void>();
 
@@ -80,12 +85,12 @@ export function createDemoApi(): Api {
     async signOut() { session = null; listeners.forEach((l) => l(null)); },
     async myProfile() { return me; },
     async loadAll(): Promise<Snapshot> {
-      return delay({ profiles: [...profiles], styles: styles.filter((s) => !s.archived), items: [...items].sort((a, b) => b.updated_at.localeCompare(a.updated_at)), activity: [...activity].slice(0, 40), settings: { ...settings }, social: [...social], invitations: [...invitations] });
+      return delay({ profiles: [...profiles], styles: styles.filter((s) => !s.archived), items: [...items].sort((a, b) => b.updated_at.localeCompare(a.updated_at)), activity: [...activity].slice(0, 40), settings: { ...settings }, social: [...social], invitations: [...invitations], notifications: [...notifications] });
     },
     async createItem(n: NewItem) {
       if (!can('content.create')) fail('permission denied');
       const now = new Date().toISOString();
-      const it: ContentItem = { id: uuid(), title: n.title, topic: n.topic, type: n.type, style_id: n.style_id ?? null, owner_id: me.id, status: 'draft', platforms: [], scheduled_at: null, published_at: null, compliance_note: null, audience: n.audience ?? null, objective: n.objective ?? null, created_by: me.id, created_at: now, updated_at: now };
+      const it: ContentItem = { id: uuid(), title: n.title, topic: n.topic, type: n.type, style_id: n.style_id ?? null, owner_id: me.id, status: 'draft', platforms: [], scheduled_at: null, published_at: null, compliance_note: null, audience: n.audience ?? null, objective: n.objective ?? null, needs_script: false, request_note: null, requested_by: null, created_by: me.id, created_at: now, updated_at: now };
       items.unshift(it); await api.log(`created “${it.title}”`, it.id); return delay(it);
     },
     async updateItem(id, patch: ItemPatch) {
@@ -118,7 +123,7 @@ export function createDemoApi(): Api {
     async saveScript(itemId, s: NewScript) {
       const version = Math.max(0, ...scripts.filter((x) => x.item_id === itemId).map((x) => x.version)) + 1;
       const row: Script = { id: uuid(), item_id: itemId, version, ...s, approved_by: null, approved_at: null, created_by: me.id, created_at: new Date().toISOString() };
-      scripts.push(row); await api.log(`saved script version ${version}`, itemId); return delay(row);
+      scripts.push(row); const it = items.find((i) => i.id === itemId); if (it) it.needs_script = false; await api.log(`saved script version ${version}`, itemId); return delay(row);
     },
     async approveScript(id) { const s = scripts.find((x) => x.id === id); if (s) { s.approved_by = me.id; s.approved_at = new Date().toISOString(); } },
     async listCaptions(itemId) { return captions.filter((c) => c.item_id === itemId); },
@@ -148,6 +153,16 @@ export function createDemoApi(): Api {
     async updateSocial(platform, patch) { const s = social.find((x) => x.platform === platform); if (s) Object.assign(s, patch); },
     async addApproval() {},
     async log(message, itemId = null) { activity.unshift({ id: actId++, item_id: itemId, actor_id: me.id, via: 'app', message, created_at: new Date().toISOString() }); },
+    async listComments(itemId) { return comments.filter((c) => c.item_id === itemId); },
+    async addComment(itemId, body) { comments.push({ id: uuid(), item_id: itemId, author_id: me.id, body: body.trim(), via: 'app', created_at: new Date().toISOString() }); },
+    async markNotificationsRead(ids) { notifications.forEach((n) => { if (!ids || ids.includes(n.id)) n.read_at = n.read_at ?? new Date().toISOString(); }); },
+    async mfaStatus() { return { current: 'aal1', next: 'aal1', factors: [] }; },
+    async mfaEnroll() { return fail('Two-step login isn’t available in demo mode.'); },
+    async mfaVerify() { fail('Two-step login isn’t available in demo mode.'); },
+    async mfaRemove() {},
+    async signOutOthers() {},
+    async claudeConnections() { return [{ connected_at: minsAgo(600), client_id: 'claude-demo' }]; },
+    async exportAll() { settings = { ...settings, last_backup_at: new Date().toISOString() }; return { exported_at: new Date().toISOString(), source: 'ABET Content OS (demo)', profiles, styles, content_items: items, scripts, captions, comments, assets, activity }; },
     async health() { return { database: true, storage: true, detail: 'Demo mode: data lives in this browser tab.' }; },
   };
   return api;

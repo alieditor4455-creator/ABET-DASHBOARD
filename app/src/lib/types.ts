@@ -24,6 +24,7 @@ export interface ContentItem {
   id: string; title: string; topic: string; type: ContentType; style_id: string | null;
   owner_id: string; status: Status; platforms: Platform[]; scheduled_at: string | null; published_at: string | null;
   compliance_note: string | null; audience: string | null; objective: string | null;
+  needs_script: boolean; request_note: string | null; requested_by: string | null;
   created_by: string; created_at: string; updated_at: string;
 }
 
@@ -45,6 +46,7 @@ export interface Asset {
 export interface Activity { id: number; item_id: string | null; actor_id: string | null; via: 'app' | 'claude' | 'system'; message: string; created_at: string }
 
 export interface Settings {
+  last_backup_at?: string | null;
   storage_limit_gb: number; temp_cleanup_days: number; auto_captions: boolean;
   auto_calendar_suggestions: boolean; notify_on_ready: boolean;
 }
@@ -52,3 +54,7 @@ export interface Settings {
 export interface SocialConnection { platform: Platform; handle: string; status: 'not_connected' | 'connected' | 'error' | 'pending_review' }
 
 export interface Session { userId: string; email: string }
+
+export interface Comment { id: string; item_id: string; author_id: string; body: string; via: 'app' | 'claude'; created_at: string }
+export interface Notification { id: number; user_id: string; item_id: string | null; kind: string; message: string; read_at: string | null; created_at: string }
+export interface MfaFactor { id: string; status: string; friendly_name?: string | null }

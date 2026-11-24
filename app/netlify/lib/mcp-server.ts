@@ -74,6 +74,31 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'get_claude_queue', title: 'Get the Claude queue',
+    description: 'Lists content items the team has sent to the Claude queue because they need a script written. For each one, read get_brand_kit (once), write the script for its format and topic, following the request note, and save it with save_script. Saving clears it from the queue and notifies the requester.',
+    inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true },
+    run: async (_a, ctx) => {
+      const rows = must(await ctx.db.from('content_items').select('id,title,topic,type,audience,objective,request_note,requested_by,style_id,created_at').eq('needs_script', true).order('created_at'), 'Reading the queue') as Json[];
+      const ids = [...new Set(rows.map((r) => r.requested_by).filter(Boolean))] as string[];
+      const people = ids.length ? (must(await ctx.db.from('profiles').select('id,full_name').in('id', ids), 'Reading names') as Json[]) : [];
+      return {
+        count: rows.length,
+        items: rows.map((r) => ({ ...r, format: TYPES[r.type as ContentType]?.name, requested_by_name: people.find((p) => p.id === r.requested_by)?.full_name ?? null, link: link(ctx, r.id as string) })),
+        next: rows.length ? 'Write and save a script for each item with save_script.' : 'The queue is empty.',
+      };
+    },
+  },
+  {
+    name: 'add_comment', title: 'Comment on a content item',
+    description: 'Adds a comment to a content item, for example to explain choices in a script or flag something for the reviewer. The owner and other commenters are notified.',
+    inputSchema: { type: 'object', properties: { item_id: uuid('Content item id'), comment: str('The comment text') }, required: ['item_id', 'comment'] },
+    run: async (a, ctx) => {
+      const it = await getItem(ctx, a.item_id as string);
+      must(await ctx.db.from('comments').insert({ item_id: it.id, body: String(a.comment).slice(0, 4000), author_id: ctx.userId, via: 'claude' }), 'Adding the comment');
+      return { ok: true, link: link(ctx, it.id as string) };
+    },
+  },
+  {
     name: 'list_content', title: 'List content items',
     description: 'Lists content items in ABET Content OS, newest first. Use it to find an item’s id.',
     inputSchema: { type: 'object', properties: { status: { type: 'string', enum: Object.keys(STATUS_LABEL) }, type: typeEnum, search: str('Words in the title'), limit: { type: 'integer', minimum: 1, maximum: 50, default: 20 } } },
@@ -93,12 +118,13 @@ export const TOOLS: Tool[] = [
     inputSchema: { type: 'object', properties: { item_id: uuid('Content item id') }, required: ['item_id'] }, annotations: { readOnlyHint: true },
     run: async (a, ctx) => {
       const it = await getItem(ctx, a.item_id as string);
-      const [scripts, style, caps] = await Promise.all([
+      const [scripts, style, caps, comments] = await Promise.all([
         ctx.db.from('scripts').select('version,title,length_label,units,source,approved_at,created_at').eq('item_id', it.id as string).order('version', { ascending: false }).limit(1),
         it.style_id ? ctx.db.from('styles').select('name,category,spec').eq('id', it.style_id as string).maybeSingle() : Promise.resolve({ data: null, error: null }),
         ctx.db.from('captions').select('platform,body').eq('item_id', it.id as string),
+        ctx.db.from('comments').select('body,via,created_at').eq('item_id', it.id as string).order('created_at').limit(30),
       ]);
-      return { ...it, link: link(ctx, it.id as string), latest_script: (scripts.data ?? [])[0] ?? null, style: style.data, captions: caps.data ?? [] };
+      return { ...it, link: link(ctx, it.id as string), latest_script: (scripts.data ?? [])[0] ?? null, style: style.data, captions: caps.data ?? [], comments: comments.data ?? [] };
     },
   },
   {
@@ -214,7 +240,7 @@ export async function handleRpc(msg: Json, ctx: Ctx): Promise<Json | null> {
         protocolVersion: SUPPORTED_VERSIONS.includes(want) ? want : SUPPORTED_VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'abet-content-os', title: 'ABET Content OS', version: '1.0.0' },
-        instructions: 'ABET Content OS is ABET Global’s content workspace. Call get_brand_kit before writing anything. Save scripts with save_script; people approve and publish in the dashboard.',
+        instructions: 'ABET Content OS is ABET Global’s content workspace. Call get_brand_kit before writing anything. Save scripts with save_script; people approve and publish in the dashboard. When asked to work through the queue, call get_claude_queue and write a script for each item.',
       });
     }
     case 'ping': return ok(id, {});

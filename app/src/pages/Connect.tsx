@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { useMemo, useRef, useState } from 'react';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Icon } from '../components/Icon';
 import { Notice } from '../components/ui';
 import { friendlyError } from '../data/api';
@@ -22,6 +22,9 @@ export function Connect() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mfa, setMfa] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const client = useRef<SupabaseClient | null>(null);
 
   const back = (params: Record<string, string>) => {
     const u = new URL(redirect);
@@ -30,19 +33,38 @@ export function Connect() {
     window.location.assign(u.toString());
   };
 
+  const finish = async (sb: SupabaseClient) => {
+    const p = await sb.rpc('my_profile');
+    if (!p.data || !(p.data as { active: boolean }).active) throw new Error('Your account is waiting for an admin to approve it.');
+    const { data: s } = await sb.auth.getSession();
+    if (!s.session) throw new Error('Sign-in failed. Try again.');
+    const r = await sb.rpc('create_oauth_code', { p_refresh_token: s.session.refresh_token, p_code_challenge: challenge, p_redirect_uri: redirect, p_client_id: q.get('client_id') });
+    if (r.error) throw new Error(r.error.message);
+    back({ code: r.data as string });
+  };
+
   const allow = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setError(null);
     try {
+      if (mfa && client.current) {
+        const v = await client.current.auth.mfa.challengeAndVerify({ factorId: mfa, code: code.replace(/\s/g, '') });
+        if (v.error) throw new Error('That code didn’t work. Try the newest code from your authenticator app.');
+        await finish(client.current);
+        return;
+      }
       // A separate session just for Claude, so signing out of the dashboard doesn't disconnect it (and vice versa).
       const sb = createClient(URL_!, KEY_!, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'abet-claude-connect' } });
+      client.current = sb;
       const s = await sb.auth.signInWithPassword({ email, password });
       if (s.error || !s.data.session) throw new Error(s.error?.message ?? 'Sign-in failed');
-      const p = await sb.rpc('my_profile');
-      if (!p.data || !(p.data as { active: boolean }).active) throw new Error('Your account is waiting for an admin to approve it.');
-      const r = await sb.rpc('create_oauth_code', { p_refresh_token: s.data.session.refresh_token, p_code_challenge: challenge, p_redirect_uri: redirect, p_client_id: q.get('client_id') });
-      if (r.error) throw new Error(r.error.message);
-      back({ code: r.data as string });
+      const aal = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal.data && aal.data.nextLevel === 'aal2' && aal.data.currentLevel !== 'aal2') {
+        const f = await sb.auth.mfa.listFactors();
+        const totp = (f.data?.totp ?? [])[0];
+        if (totp) { setMfa(totp.id); setBusy(false); return; }
+      }
+      await finish(sb);
     } catch (err) { setError(friendlyError(err)); setBusy(false); }
   };
 
@@ -60,8 +82,10 @@ export function Connect() {
             {['Read the Brand Kit, styles, content and calendar', 'Create drafts and save scripts and captions', 'Move items to production or review'].map((t) => <li key={t} className="check ok"><Icon name="checkc" size={16} /><span>{t}</span></li>)}
             <li className="check bad"><Icon name="xc" size={16} /><span>Approving and publishing stay with people in the dashboard</span></li>
           </ul>
-          <div className="field"><label htmlFor="cem">ABET Content OS email</label><input id="cem" className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-          <div className="field"><label htmlFor="cpw">Password</label><input id="cpw" className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+          {!mfa ? <>
+            <div className="field"><label htmlFor="cem">ABET Content OS email</label><input id="cem" className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div className="field"><label htmlFor="cpw">Password</label><input id="cpw" className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+          </> : <div className="field"><label htmlFor="cotp">6-digit code from your authenticator app</label><input id="cotp" className="input" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={7} required value={code} onChange={(e) => setCode(e.target.value)} style={{ fontSize: 20, letterSpacing: '.2em', textAlign: 'center' }} /></div>}
           {error && <Notice kind="err" icon="alert">{error}</Notice>}
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" className="btn" onClick={() => back({ error: 'access_denied' })} disabled={busy}>Cancel</button>

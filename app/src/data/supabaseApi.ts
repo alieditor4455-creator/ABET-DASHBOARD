@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Api, ItemPatch, NewItem, NewScript, Snapshot } from './api';
-import type { Asset, Caption, ContentItem, Platform, Profile, Role, Script, Session, Settings, Style } from '../lib/types';
+import type { Asset, Caption, Comment, ContentItem, MfaFactor, Notification, Platform, Profile, Role, Script, Session, Settings, Style } from '../lib/types';
 
 const BUCKET = 'content';
 
@@ -45,7 +45,7 @@ export function createSupabaseApi(url: string, key: string): Api {
     },
 
     async loadAll(): Promise<Snapshot> {
-      const [profiles, styles, items, activity, settings, social, invitations] = await Promise.all([
+      const [profiles, styles, items, activity, settings, social, invitations, notifications] = await Promise.all([
         sb.from('profiles').select('*').order('created_at'),
         sb.from('styles').select('*').eq('archived', false).order('category').order('created_at'),
         sb.from('content_items').select('*').order('updated_at', { ascending: false }),
@@ -53,11 +53,13 @@ export function createSupabaseApi(url: string, key: string): Api {
         sb.from('app_settings').select('*').single(),
         sb.from('social_connections').select('*'),
         sb.from('invitations').select('*').order('created_at', { ascending: false }),
+        sb.from('notifications').select('*').order('created_at', { ascending: false }).limit(40),
       ]);
       return {
         profiles: ok(profiles) as Profile[], styles: ok(styles) as Style[], items: ok(items) as ContentItem[],
         activity: ok(activity) as Snapshot['activity'], settings: ok(settings) as Settings,
         social: ok(social) as Snapshot['social'], invitations: (invitations.data ?? []) as Snapshot['invitations'],
+        notifications: (notifications.data ?? []) as Notification[],
       };
     },
     async createItem(n: NewItem) {
@@ -120,6 +122,41 @@ export function createSupabaseApi(url: string, key: string): Api {
     async log(message, itemId = null) {
       const r = await sb.from('activity').insert({ message, item_id: itemId, actor_id: uid, via: 'app' });
       if (r.error) console.warn('activity log failed', r.error.message);
+    },
+    async listComments(itemId) { return ok(await sb.from('comments').select('*').eq('item_id', itemId).order('created_at')) as Comment[]; },
+    async addComment(itemId, body) { ok(await sb.from('comments').insert({ item_id: itemId, body: body.trim(), author_id: uid })); },
+    async markNotificationsRead(ids) {
+      let q = sb.from('notifications').update({ read_at: new Date().toISOString() }).is('read_at', null);
+      if (ids?.length) q = q.in('id', ids);
+      ok(await q);
+    },
+    async mfaStatus() {
+      const [aal, f] = await Promise.all([sb.auth.mfa.getAuthenticatorAssuranceLevel(), sb.auth.mfa.listFactors()]);
+      if (aal.error) throw new Error(aal.error.message);
+      const factors = ((f.data?.all ?? []) as { id: string; status: string; friendly_name?: string; factor_type: string }[])
+        .filter((x) => x.factor_type === 'totp').map((x) => ({ id: x.id, status: x.status, friendly_name: x.friendly_name ?? null })) as MfaFactor[];
+      return { current: aal.data.currentLevel ?? 'aal1', next: aal.data.nextLevel ?? 'aal1', factors };
+    },
+    async mfaEnroll() {
+      const old = await sb.auth.mfa.listFactors();
+      for (const f of ((old.data?.all ?? []) as { id: string; status: string; factor_type: string }[])) if (f.factor_type === 'totp' && f.status !== 'verified') await sb.auth.mfa.unenroll({ factorId: f.id });
+      const r = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: `ABET ${new Date().toISOString().slice(0, 10)}` });
+      if (r.error) throw new Error(r.error.message);
+      return { factorId: r.data.id, qr: r.data.totp.qr_code, secret: r.data.totp.secret };
+    },
+    async mfaVerify(factorId, code) {
+      const r = await sb.auth.mfa.challengeAndVerify({ factorId, code: code.replace(/\s/g, '') });
+      if (r.error) throw new Error(/invalid|expired/i.test(r.error.message) ? 'That code didn’t work. Check the time on your phone and try the newest code.' : r.error.message);
+    },
+    async mfaRemove(factorId) { const r = await sb.auth.mfa.unenroll({ factorId }); if (r.error) throw new Error(r.error.message); },
+    async signOutOthers() { const r = await sb.auth.signOut({ scope: 'others' }); if (r.error) throw new Error(r.error.message); },
+    async claudeConnections() { return ok(await sb.rpc('my_claude_connections')) as { connected_at: string; client_id: string | null }[]; },
+    async exportAll() {
+      const tables = ['profiles', 'invitations', 'styles', 'content_items', 'scripts', 'captions', 'comments', 'approvals', 'assets', 'activity', 'app_settings', 'social_connections'];
+      const out: Record<string, unknown> = { exported_at: new Date().toISOString(), source: 'ABET Content OS', note: 'Database records only. Uploaded files stay in storage; their paths are listed under assets.' };
+      for (const name of tables) out[name] = ok(await sb.from(name).select('*'));
+      await sb.from('app_settings').update({ last_backup_at: new Date().toISOString() }).eq('id', true);
+      return out;
     },
     async health() {
       const db = await sb.from('app_settings').select('id').limit(1);

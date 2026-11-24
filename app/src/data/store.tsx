@@ -23,6 +23,7 @@ interface Ctx {
   toast: (msg: string, icon?: string) => void;
   run: <T>(fn: () => Promise<T>, success?: string) => Promise<T | undefined>;
   toastState: { msg: string; icon: string; id: number } | null;
+  mfaNeeded: string | null;
 }
 
 const StoreCtx = createContext<Ctx | null>(null);
@@ -34,6 +35,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [toastState, setToast] = useState<Ctx['toastState']>(null);
+  const [mfaNeeded, setMfaNeeded] = useState<string | null>(null);
   const tId = useRef(0);
 
   const toast = useCallback((msg: string, icon = 'check') => {
@@ -46,14 +48,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       const p = await api.myProfile();
       setProfile(p);
-      if (p?.active) setData(await api.loadAll());
+      if (!p?.active) return;
+      // Two-step login: people who turned it on must enter a code before seeing anything.
+      const m = await api.mfaStatus().catch(() => null);
+      const verified = m?.factors.find((f) => f.status === 'verified');
+      if (m && verified && m.current !== 'aal2') { setMfaNeeded(verified.id); return; }
+      setMfaNeeded(null);
+      setData(await api.loadAll());
     } catch (e) { toast(friendlyError(e), 'alert'); }
   }, [toast]);
 
   useEffect(() => {
     let alive = true;
     api.getSession().then((s) => { if (alive) { setSession(s); setAuthReady(true); } });
-    const off = api.onAuth((s) => { setSession(s); if (!s) { setProfile(null); setData(null); } });
+    const off = api.onAuth((s) => { setSession(s); if (!s) { setProfile(null); setData(null); setMfaNeeded(null); } });
     return () => { alive = false; off(); };
   }, []);
 
@@ -80,8 +88,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [refresh, toast]);
 
-  const value = useMemo(() => ({ api, session, profile, data, loading, authReady, refresh, can, toast, run, toastState }),
-    [session, profile, data, loading, authReady, refresh, can, toast, run, toastState]);
+  const value = useMemo(() => ({ api, session, profile, data, loading, authReady, refresh, can, toast, run, toastState, mfaNeeded }),
+    [session, profile, data, loading, authReady, refresh, can, toast, run, toastState, mfaNeeded]);
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }
 

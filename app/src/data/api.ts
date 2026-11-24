@@ -1,5 +1,5 @@
 import type {
-  Activity, Asset, Caption, ContentItem, ContentType, Invitation, Platform, Profile, Role, Script, ScriptUnit,
+  Activity, Asset, Caption, Comment, MfaFactor, Notification, ContentItem, ContentType, Invitation, Platform, Profile, Role, Script, ScriptUnit,
   Session, Settings, SocialConnection, Style,
 } from '../lib/types';
 
@@ -11,10 +11,11 @@ export interface Snapshot {
   settings: Settings;
   social: SocialConnection[];
   invitations: Invitation[];
+  notifications: Notification[];
 }
 
 export interface NewItem { title: string; topic: string; type: ContentType; style_id?: string | null; audience?: string | null; objective?: string | null }
-export type ItemPatch = Partial<Pick<ContentItem, 'title' | 'topic' | 'style_id' | 'owner_id' | 'status' | 'platforms' | 'scheduled_at' | 'published_at' | 'compliance_note' | 'audience' | 'objective'>>;
+export type ItemPatch = Partial<Pick<ContentItem, 'title' | 'topic' | 'style_id' | 'owner_id' | 'status' | 'platforms' | 'scheduled_at' | 'published_at' | 'compliance_note' | 'audience' | 'objective' | 'needs_script' | 'request_note' | 'requested_by'>>;
 export interface NewScript { title: string; length_label: string | null; units: ScriptUnit[]; source: 'manual' | 'claude' }
 
 export interface Api {
@@ -49,6 +50,17 @@ export interface Api {
   updateSocial(platform: Platform, patch: Partial<Pick<SocialConnection, 'status' | 'handle'>>): Promise<void>;
   addApproval(itemId: string, kind: 'creative' | 'compliance', decision: 'approved' | 'changes_requested' | 'note_resolved', note?: string): Promise<void>;
   log(message: string, itemId?: string | null): Promise<void>;
+  listComments(itemId: string): Promise<Comment[]>;
+  addComment(itemId: string, body: string): Promise<void>;
+  markNotificationsRead(ids?: number[]): Promise<void>;
+  // two-step login
+  mfaStatus(): Promise<{ current: string; next: string; factors: MfaFactor[] }>;
+  mfaEnroll(): Promise<{ factorId: string; qr: string; secret: string }>;
+  mfaVerify(factorId: string, code: string): Promise<void>;
+  mfaRemove(factorId: string): Promise<void>;
+  signOutOthers(): Promise<void>;
+  claudeConnections(): Promise<{ connected_at: string; client_id: string | null }[]>;
+  exportAll(): Promise<Record<string, unknown>>;
   /** Real health checks used by AI & Integrations. */
   health(): Promise<{ database: boolean; storage: boolean; detail?: string }>;
 }

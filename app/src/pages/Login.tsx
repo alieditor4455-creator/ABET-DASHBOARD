@@ -19,7 +19,7 @@ export function Login() {
     try {
       if (mode === 'in') await api.signIn(email, password);
       else if (mode === 'up') {
-        if (password.length < 8) throw new Error('Use at least 8 characters for your password.');
+        if (password.length < 10 || !/[a-z]/i.test(password) || !/\d/.test(password)) throw new Error('Use at least 10 characters, with letters and numbers.');
         const r = await api.signUp(email, password, name.trim() || email.split('@')[0]);
         if (r.needsConfirm) setMsg({ kind: 'ok', text: `We sent a confirmation link to ${email}. Open it, then sign in here.` });
       } else {

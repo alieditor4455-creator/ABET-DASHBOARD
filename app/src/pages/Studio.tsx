@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../data/store';
 import { Icon } from '../components/Icon';
 import { Avatar, Chip, CopyButton, Empty, Notice, Panel, StatusChip, Thumb } from '../components/ui';
+import { Comments } from '../components/Account';
 import { PLAT, PLAT_KEYS, PLAT_LIMIT, REC_STYLE, ROLE_LABEL, STYLE_CATS, TOPIC_SUGGESTIONS, TYPES, TYPE_KEYS } from '../lib/constants';
 import { claudePrompt, complianceCheck, makeCaption, templateScript } from '../lib/script';
 import { ago, fmtBytes, fmtDateTime, isPast, toLocalInput } from '../lib/format';
@@ -21,7 +22,8 @@ export function Studio({ id, params }: { id: string | null; params: URLSearchPar
 /* ------------------------------------------------------------------ home */
 function StudioHome() {
   const { data, can } = useStore();
-  const drafts = (data?.items ?? []).filter((i) => i.status === 'draft').slice(0, 8);
+  const drafts = (data?.items ?? []).filter((i) => i.status === 'draft' && !i.needs_script).slice(0, 8);
+  const queued = (data?.items ?? []).filter((i) => i.needs_script);
   return (
     <div className="page">
       <div className="studio-hero"><h1>What would you like to create?</h1><p>Pick a format and a topic. Claude writes the script in ABET’s voice, you choose the look, and your editors make it.</p></div>
@@ -34,6 +36,20 @@ function StudioHome() {
           </a>
         ))}
       </div>
+      {queued.length > 0 && (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><h2>In the Claude queue</h2><Chip cls="st-Generating">{queued.length}</Chip></div>
+          <Notice icon="sparkles">To work through the queue, ask Claude: <b>“Write scripts for everything in the ABET Content OS Claude queue.”</b></Notice>
+          <div className="drafts">
+            {queued.map((i) => (
+              <a key={i.id} className="draft-card" {...linkProps(`/studio/${i.id}`)}>
+                <span className="t-ico"><Icon name="sparkles" size={16} /></span>
+                <span style={{ minWidth: 0 }}><b>{i.title}</b><span>{TYPES[i.type].name} · {i.request_note ?? 'waiting for Claude'}</span></span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
       {drafts.length > 0 && (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center' }}><h2>Continue a draft</h2><a className="link" style={{ marginLeft: 'auto' }} {...linkProps('/production')}>All drafts <Icon name="arrowR" /></a></div>
@@ -168,7 +184,10 @@ function ItemWizard({ id, step }: { id: string; step: Step | null }) {
             {item.scheduled_at && <div className="sr-row"><dt>Publish</dt><dd>{fmtDateTime(item.scheduled_at)}</dd></div>}
           </dl>
           {item.compliance_note && <div style={{ marginTop: 12 }}><Notice kind="warn" icon="alert"><b>Compliance:</b> {item.compliance_note}</Notice></div>}
-          </div></aside>
+          {item.needs_script && <div style={{ marginTop: 12 }}><Chip cls="st-Generating" icon="sparkles">In the Claude queue</Chip></div>}
+          </div>
+          <div className="panel-h" style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}><span className="ico"><Icon name="edit" size={16} /></span><h3>Comments</h3></div>
+          <div className="panel-b"><Comments itemId={item.id} /></div></aside>
       </div>
     </div>
   );
@@ -184,7 +203,8 @@ function parsePasted(text: string): ScriptUnit[] {
 }
 
 function ScriptStep({ item, scripts, reload, onNext }: { item: ContentItem; scripts: Script[]; reload: () => Promise<void>; onNext: () => void }) {
-  const { api, run, can, profile } = useStore();
+  const { api, run, can, profile, data, toast } = useStore();
+  const [queueNote, setQueueNote] = useState('');
   const latest = scripts[0];
   const [mode, setMode] = useState<'choose' | 'paste' | 'edit'>(latest ? 'edit' : 'choose');
   const [title, setTitle] = useState(latest?.title ?? item.title);
@@ -216,20 +236,37 @@ function ScriptStep({ item, scripts, reload, onNext }: { item: ContentItem; scri
   };
   const setUnit = (n: number, patch: Partial<ScriptUnit>) => { setUnits((u) => u.map((x, i) => (i === n ? { ...x, ...patch } : x))); setDirty(true); };
 
+  const openClaude = async () => {
+    // Copy the request, then open a blank Claude chat. Pasting it yourself avoids Claude's warning for prompts arriving by link.
+    try { await navigator.clipboard.writeText(prompt); toast('Request copied. Paste it into Claude with Ctrl+V'); } catch { toast('Copy the request below, then paste it into Claude', 'info'); }
+    window.open('https://claude.ai/new', '_blank', 'noopener');
+  };
+  const queue = (on: boolean) => run(() => api.updateItem(item.id, on ? { needs_script: true, request_note: queueNote.trim() || null, requested_by: profile?.id ?? null } : { needs_script: false }), on ? 'Sent to the Claude queue' : 'Removed from the Claude queue');
+  const requester = data?.profiles.find((p) => p.id === item.requested_by);
+
   if (mode === 'choose') return (
     <>
+      {item.needs_script && (
+        <Notice kind="ok" icon="sparkles"><b>In the Claude queue</b>{requester ? `, requested by ${requester.full_name}` : ''}. {item.request_note ? `Note: “${item.request_note}”. ` : ''}The script appears here automatically when Claude saves it.
+          {canEdit && <> <button className="link" onClick={() => queue(false)}>Remove from queue</button></>}</Notice>
+      )}
       <Panel icon="sparkles" title="Get the script">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div className="choice-grid">
-            <div className="choice"><Icon name="sparkles" /><b>Ask Claude</b><p>Open Claude and paste the request below. Once the connector is set up, Claude saves the script here automatically.</p>
-              <a className="btn primary sm" href={`https://claude.ai/new?q=${encodeURIComponent(prompt)}`} target="_blank" rel="noopener noreferrer"><Icon name="external" size={16} />Open Claude</a></div>
-            <div className="choice"><Icon name="copy" /><b>Paste from Claude</b><p>Already have a script from Claude or anyone else? Paste it in. Blank lines separate the scenes.</p>
-              <button className="btn sm" onClick={() => setMode('paste')} disabled={!canEdit}><Icon name="edit" size={16} />Paste a script</button></div>
+          <div className="choice-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+            <div className="choice"><Icon name="sparkles" /><b>Ask Claude yourself</b><p>For people with Claude. Copies the request and opens a new Claude chat: paste it, and Claude saves the script here.</p>
+              <button className="btn primary sm" style={{ alignSelf: 'flex-start' }} onClick={openClaude}><Icon name="external" size={16} />Copy request and open Claude</button></div>
+            <div className="choice"><Icon name="users" /><b>Send to the Claude queue</b><p>No Claude account? Add a note and send it. Whoever runs the queue in Claude writes the script, and you get a notification.</p>
+              {!item.needs_script ? <>
+                <input className="input" placeholder="Note for Claude (optional), e.g. keep it under 45 seconds" value={queueNote} onChange={(e) => setQueueNote(e.target.value)} aria-label="Note for Claude" disabled={!canEdit} />
+                <button className="btn sm" style={{ alignSelf: 'flex-start' }} disabled={!canEdit} onClick={() => queue(true)}><Icon name="send" size={16} />Send to queue</button></>
+                : <Chip cls="st-Generating" icon="clock">Waiting for Claude</Chip>}</div>
+            <div className="choice"><Icon name="copy" /><b>Paste a script</b><p>Already have a script? Paste it in. Blank lines separate the scenes.</p>
+              <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => setMode('paste')} disabled={!canEdit}><Icon name="edit" size={16} />Paste a script</button></div>
             <div className="choice"><Icon name="file" /><b>Start from a template</b><p>A compliant starting structure for this format. Edit it into the final script.</p>
-              <button className="btn sm" disabled={!canEdit} onClick={() => { const t = templateScript(item.type, item.topic); setTitle(t.title); setUnits(t.units); setDirty(true); setMode('edit'); }}><Icon name="file" size={16} />Use template</button></div>
+              <button className="btn sm" style={{ alignSelf: 'flex-start' }} disabled={!canEdit} onClick={() => { const t = templateScript(item.type, item.topic); setTitle(t.title); setUnits(t.units); setDirty(true); setMode('edit'); }}><Icon name="file" size={16} />Use template</button></div>
           </div>
-          <div className="prompt-box">{prompt}</div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><CopyButton text={prompt} label="Copy request" /><span className="muted" style={{ fontSize: 12 }}><Icon name="loader" spin size={13} /> Watching for a script from Claude</span></div>
+          <details className="specs"><summary><Icon name="chevR" size={16} />Show the request sent to Claude</summary><div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}><div className="prompt-box">{prompt}</div><CopyButton text={prompt} label="Copy request" /></div></details>
+          <span className="muted" style={{ fontSize: 12 }}><Icon name="loader" spin size={13} /> Watching for a script from Claude</span>
         </div>
       </Panel>
     </>

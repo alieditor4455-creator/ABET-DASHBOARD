@@ -14,15 +14,17 @@ import { BrandKit } from './pages/BrandKit';
 import { Integrations } from './pages/Integrations';
 import { Admin } from './pages/Admin';
 import { Connect } from './pages/Connect';
+import { MfaChallenge } from './components/Account';
 
 function Routes() {
-  const { session, profile, data, authReady, loading } = useStore();
+  const { session, profile, data, authReady, loading, mfaNeeded } = useStore();
   const { section, id, params } = useRoute();
   if (section === 'connect') return <Connect />;
   if (!authReady) return <div className="boot"><Icon name="loader" spin /></div>;
   if (!session) return <Login />;
   if (!profile) return <div className="boot">{loading ? <Icon name="loader" spin /> : 'Loading your profile…'}</div>;
   if (!profile.active) return <Pending />;
+  if (mfaNeeded) return <MfaChallenge factorId={mfaNeeded} />;
   if (!data) return <div className="boot"><Icon name="loader" spin /></div>;
   const page = (() => {
     switch (section) {

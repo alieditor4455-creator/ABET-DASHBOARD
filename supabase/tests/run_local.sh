@@ -15,7 +15,7 @@ PSQL=(psql -h /tmp -p "$PORT" -U postgres -d postgres -q -v ON_ERROR_STOP=1)
 "${PSQL[@]}" -f "$HERE/local_auth_stub.sql"
 for f in "$HERE"/../migrations/*.sql; do "${PSQL[@]}" -f "$f"; done
 "${PSQL[@]}" -c "grant select, insert, update, delete on all tables in schema public to authenticated; grant usage, select on all sequences in schema public to authenticated; grant select on all tables in schema public to anon;"
-OUT="$(psql -h /tmp -p "$PORT" -U postgres -d postgres -f "$HERE/permissions_test.sql" -f "$HERE/oauth_test.sql" 2>&1)"
+OUT="$(psql -h /tmp -p "$PORT" -U postgres -d postgres -f "$HERE/permissions_test.sql" -f "$HERE/oauth_test.sql" -f "$HERE/update2_test.sql" 2>&1)"
 echo "$OUT" | grep -E "PASS|FAIL|ERROR|passed|^ +[0-9]" || true
 if echo "$OUT" | grep -qE "FAIL|ERROR"; then echo "Some tests failed"; exit 1; fi
 echo "All permission tests passed"

@@ -6,7 +6,7 @@ import { ago, fmtTime, isPast } from '../lib/format';
 import { linkProps, navigate } from '../lib/router';
 
 export function Dashboard() {
-  const { data, profile } = useStore();
+  const { data, profile, can } = useStore();
   if (!data) return null;
   const { items, profiles, styles, activity } = data;
   const person = (id: string | null) => profiles.find((p) => p.id === id);
@@ -40,6 +40,12 @@ export function Dashboard() {
         <div className="actions"><a className="btn" {...linkProps('/calendar')}><Icon name="calendar" />Open calendar</a></div>
       </div>
 
+      {can('team.manage') && (!data.settings.last_backup_at || Date.now() - new Date(data.settings.last_backup_at).getTime() > 7 * 86400000) && (
+        <div className="notice warn"><Icon name="download" size={16} /><span><b>Backup due.</b> {data.settings.last_backup_at ? 'It’s been more than a week since the last backup.' : 'No backup has been taken yet.'} <a className="link" {...linkProps('/admin?tab=backup')}>Download a backup</a></span></div>
+      )}
+      {data.items.some((i) => i.needs_script) && (
+        <div className="notice"><Icon name="sparkles" size={16} /><span><b>{data.items.filter((i) => i.needs_script).length} in the Claude queue.</b> Ask Claude: “Write scripts for everything in the ABET Content OS Claude queue.” <a className="link" {...linkProps('/studio')}>View queue</a></span></div>
+      )}
       <div className="stat-grid">
         <Card icon="wand" title="In production" sub="Drafts and editing" value={prod.length} small={`${making.length} with editors`} to="/production" />
         <Card icon="eye" title="Ready for review" sub="Awaiting approval" value={review.length} small={flagged.length ? `${flagged.length} with compliance notes` : 'No compliance notes'} to="/production" hl />

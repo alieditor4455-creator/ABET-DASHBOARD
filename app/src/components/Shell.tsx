@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
 import { Avatar } from './ui';
+import { AccountModal, NotificationBell } from './Account';
 import { useStore } from '../data/store';
 import { linkProps, navigate } from '../lib/router';
 import { ROLE_LABEL, TYPES, TYPE_KEYS } from '../lib/constants';
@@ -30,6 +31,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
   const [collapsed, setCollapsed] = useState(() => { try { return localStorage.getItem('abet-sb') === '1'; } catch { return false; } });
   const [mobOpen, setMobOpen] = useState(false);
   const [pal, setPal] = useState(false);
+  const [acct, setAcct] = useState(false);
   const [dark, toggleDark] = useTheme();
   const active = data?.items.filter((i) => i.status !== 'completed').length ?? 0;
 
@@ -66,7 +68,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
           })}
         </nav>
         <div className="sb-foot">
-          <div className="sb-user"><Avatar profile={profile} lg /><div className="who"><b>{profile?.full_name}</b><span>{profile ? ROLE_LABEL[profile.role] : ''}</span></div></div>
+          <button className="sb-user" style={{ width: '100%', textAlign: 'left' }} onClick={() => setAcct(true)} title="Account & security"><Avatar profile={profile} lg /><div className="who"><b>{profile?.full_name}</b><span>{profile ? ROLE_LABEL[profile.role] : ''} · Account</span></div></button>
           <button className="sb-collapse" onClick={() => api.signOut()}><Icon name="logout" size={16} /><span>Sign out</span></button>
           <button className="sb-collapse" onClick={() => setCollapsed((c) => { try { localStorage.setItem('abet-sb', c ? '0' : '1'); } catch { /* ignore */ } return !c; })}><Icon name="chevsL" size={16} /><span>Collapse</span></button>
         </div>
@@ -77,6 +79,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
           <button className="search" onClick={() => setPal(true)} aria-label="Search"><Icon name="search" size={17} /><span>Search content, styles and pages</span><kbd>⌘K</kbd></button>
           <div className="tb-right">
             {api.mode === 'demo' && <span className="preview-flag" title="Demo mode: sample data kept in this browser tab only."><i />Demo<span className="long">&nbsp;· sample data</span></span>}
+            <NotificationBell />
             <button className="circle-btn" id="themeBtn" aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} onClick={toggleDark}><Icon name={dark ? 'sun' : 'moon'} /></button>
             {can('content.create') && <a className="btn primary tb-create" {...linkProps('/studio')} aria-label="Create content"><Icon name="plus" /><span>Create content</span></a>}
           </div>
@@ -84,6 +87,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
         <main className="content" onClick={() => setMobOpen(false)}>{children}</main>
       </div>
       {pal && <Palette onClose={() => setPal(false)} />}
+      {acct && <AccountModal onClose={() => setAcct(false)} />}
     </div>
   );
 }
