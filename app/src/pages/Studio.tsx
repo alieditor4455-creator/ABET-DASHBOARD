@@ -3,11 +3,12 @@ import { useStore } from '../data/store';
 import { Icon } from '../components/Icon';
 import { Avatar, Chip, CopyButton, Empty, Notice, Panel, StatusChip, Thumb } from '../components/ui';
 import { Comments } from '../components/Account';
-import { PLAT, PLAT_KEYS, PLAT_LIMIT, REC_STYLE, ROLE_LABEL, STYLE_CATS, TOPIC_SUGGESTIONS, TYPES, TYPE_KEYS } from '../lib/constants';
+import { PLAT, PLAT_KEYS, PLAT_LIMIT, ROLE_LABEL, TOPIC_SUGGESTIONS, TYPES, TYPE_KEYS } from '../lib/constants';
+import { rendererFor } from '../lib/renderers';
 import { claudePrompt, complianceCheck, makeCaption, templateScript } from '../lib/script';
 import { ago, fmtBytes, fmtDateTime, isPast, toLocalInput } from '../lib/format';
 import { linkProps, navigate } from '../lib/router';
-import type { Asset, ContentItem, ContentType, Platform, Script, ScriptUnit } from '../lib/types';
+import type { Asset, ContentItem, ContentType, Platform, ProductionJob, Script, ScriptUnit } from '../lib/types';
 
 const STEPS = [['script', 'Script'], ['style', 'Style'], ['produce', 'Production'], ['review', 'Review'], ['publish', 'Publish']] as const;
 type Step = (typeof STEPS)[number][0];
@@ -26,7 +27,7 @@ function StudioHome() {
   const queued = (data?.items ?? []).filter((i) => i.needs_script);
   return (
     <div className="page">
-      <div className="studio-hero"><h1>What would you like to create?</h1><p>Pick a format and a topic. Claude writes the script in ABET’s voice, you choose the look, and your editors make it.</p></div>
+      <div className="studio-hero"><h1>What would you like to create?</h1><p>Choose a category, enter a topic, pick one of ABET’s approved styles and click Generate.</p></div>
       {!can('content.create') && <Notice kind="warn" icon="lock">Your role can review content but not create it. Ask an admin if you need to create.</Notice>}
       <div className="type-grid">
         {TYPE_KEYS.map((k) => (
@@ -67,54 +68,117 @@ function StudioHome() {
   );
 }
 
-/* ------------------------------------------------------------------ step 1: topic */
+/* ------------------------------------------------------------------ create: topic + style + generate */
+const AUDIENCES = ['Complete beginners', 'Beginner traders', 'Intermediate traders', 'Experienced traders', 'Existing ABET clients', 'Potential clients'];
+const OBJECTIVES = ['Awareness', 'Education', 'Engagement', 'Brand trust', 'Lead generation', 'Conversion', 'Retention'];
+
+export function useCapabilities() {
+  const { api } = useStore();
+  const [caps, setCaps] = useState<{ claudeApi: boolean; renderers: string[] } | null>(null);
+  useEffect(() => { api.capabilities().then(setCaps).catch(() => setCaps({ claudeApi: false, renderers: [] })); }, [api]);
+  return caps;
+}
+
+export function StylePreview({ assetId, motif }: { assetId: string | null; motif?: string }) {
+  const { api } = useStore();
+  const [url, setUrl] = useState<{ u: string; video: boolean } | null>(null);
+  useEffect(() => {
+    let on = true;
+    if (!assetId) { setUrl(null); return; }
+    api.listAssets().then(async (all) => {
+      const a = all.find((x) => x.id === assetId);
+      if (!a) return;
+      const u = await api.assetUrl(a).catch(() => '');
+      if (on && u) setUrl({ u, video: /\.(mp4|mov|webm|m4v)$/i.test(a.name) });
+    });
+    return () => { on = false; };
+  }, [api, assetId]);
+  if (url) return <span className="thumb" style={{ display: 'block' }}>{url.video ? <video src={url.u} muted loop autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url.u} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</span>;
+  return <Thumb motif={motif || 'mini'} />;
+}
+
 function NewTopic({ type }: { type: ContentType }) {
-  const { api, run, can } = useStore();
+  const { api, run, can, data } = useStore();
+  const caps = useCapabilities();
   const T = TYPES[type];
   const [topic, setTopic] = useState('');
   const [adv, setAdv] = useState(false);
-  const [audience, setAudience] = useState('Complete beginners');
-  const [objective, setObjective] = useState('Education');
-  const [busy, setBusy] = useState(false);
-  const create = async () => {
+  const [audience, setAudience] = useState('');
+  const [objective, setObjective] = useState('');
+  const [styleId, setStyleId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<'' | 'full' | 'script'>('');
+  const styles = (data?.styles ?? []).filter((s) => s.content_type === type && s.status === 'approved' && s.active && !s.archived);
+  const style = styles.find((s) => s.id === styleId) ?? null;
+  const functional = !!style && !!rendererFor(style.template_kind) && !!caps?.renderers.includes(style.template_kind ?? '');
+
+  const start = async (mode: 'full' | 'script') => {
     if (!topic.trim()) return;
-    setBusy(true);
-    const item = await run(() => api.createItem({ title: topic.trim(), topic: topic.trim(), type, audience, objective }), 'Draft created');
-    setBusy(false);
-    if (item) navigate(`/studio/${item.id}?step=script`);
+    setBusy(mode);
+    const item = await run(() => api.createItem({ title: topic.trim(), topic: topic.trim(), type, style_id: style?.id ?? null, audience: audience || null, objective: objective || null }));
+    if (!item) { setBusy(''); return; }
+    const r = await run(() => api.generate(item.id, mode), mode === 'full' ? 'Generating…' : 'Writing the script…');
+    setBusy('');
+    navigate(`/studio/${item.id}${r ? '' : '?step=script'}`);
   };
+
   return (
     <div className="page">
-      <div className="wiz-top"><a className="back" {...linkProps('/studio')}><Icon name="arrowL" size={16} />All formats</a><Stepper current={-1} max={-1} /></div>
+      <div className="wiz-top"><a className="back" {...linkProps('/studio')}><Icon name="arrowL" size={16} />All categories</a></div>
       <div className="wiz">
         <div className="wiz-main">
           <section className="panel"><div className="panel-b topic-box" style={{ paddingTop: 24 }}>
-            <label htmlFor="topic" className="muted" style={{ fontSize: 12.5, fontWeight: 500 }}>What is your {T.short.toLowerCase()} about?</label>
-            <textarea id="topic" autoFocus maxLength={200} placeholder="e.g. What is a pip? Explain it for complete beginners." value={topic} onChange={(e) => setTopic(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); create(); } }} />
+            <label htmlFor="topic" className="muted" style={{ fontSize: 12.5, fontWeight: 500 }}>1 · Topic</label>
+            <textarea id="topic" autoFocus maxLength={200} placeholder="e.g. What is Forex?" value={topic} onChange={(e) => setTopic(e.target.value)} />
             <div className="sugg" aria-label="Suggestions">{TOPIC_SUGGESTIONS.map((s) => <button key={s} type="button" onClick={() => setTopic(s)}>{s}</button>)}</div>
-          </div></section>
-          <section className="panel"><div className="panel-b" style={{ paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="sparkles" size={16} /><b style={{ fontWeight: 500 }}>Claude takes care of</b></div>
-            <div className="claude-does">
-              <div><Icon name="book" /><b>Research</b>Checks the topic against ABET’s guides.</div>
-              <div><Icon name="users" /><b>Audience</b>Pitches it at the right level.</div>
-              <div><Icon name="target" /><b>Strategy</b>Picks the angle, hook and call to action.</div>
-              <div><Icon name="shield" /><b>Compliance</b>Adds the risk warning, avoids return claims.</div>
-            </div>
-            <button type="button" className="adv-toggle" aria-expanded={adv} onClick={() => setAdv(!adv)}><Icon name="chevR" size={16} />Advanced settings</button>
+            <button type="button" className="adv-toggle" aria-expanded={adv} onClick={() => setAdv(!adv)}><Icon name="chevR" size={16} />Advanced (optional): audience and objective</button>
             {adv && (
               <div className="adv-grid">
-                <div className="field"><label htmlFor="aud">Target audience</label><select id="aud" className="select" value={audience} onChange={(e) => setAudience(e.target.value)}>{['Complete beginners', 'Beginner traders', 'Intermediate traders', 'Experienced traders', 'Existing ABET clients', 'Potential clients'].map((o) => <option key={o}>{o}</option>)}</select></div>
-                <div className="field"><label htmlFor="obj">Objective</label><select id="obj" className="select" value={objective} onChange={(e) => setObjective(e.target.value)}>{['Awareness', 'Education', 'Engagement', 'Brand trust', 'Lead generation', 'Conversion', 'Retention'].map((o) => <option key={o}>{o}</option>)}</select></div>
+                <div className="field"><label htmlFor="aud">Target audience</label><select id="aud" className="select" value={audience} onChange={(e) => setAudience(e.target.value)}><option value="">Let Claude decide</option>{AUDIENCES.map((o) => <option key={o}>{o}</option>)}</select></div>
+                <div className="field"><label htmlFor="obj">Objective</label><select id="obj" className="select" value={objective} onChange={(e) => setObjective(e.target.value)}><option value="">Let Claude decide</option>{OBJECTIVES.map((o) => <option key={o}>{o}</option>)}</select></div>
               </div>
             )}
           </div></section>
-          <div className="wiz-foot"><span className="muted" style={{ fontSize: 12.5 }}>Nothing is published without approval.</span>
-            <div className="r"><button className="btn primary" disabled={!topic.trim() || busy || !can('content.create')} onClick={create}>{busy ? <Icon name="loader" spin size={16} /> : null}Continue to script<Icon name="arrowR" /></button></div></div>
+
+          <section className="panel"><div className="panel-b" style={{ paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <span className="muted" style={{ fontSize: 12.5, fontWeight: 500 }}>2 · Creative style</span>
+            {styles.length ? (
+              <div className="gallery">
+                {styles.map((s) => {
+                  const ok = !!rendererFor(s.template_kind) && !!caps?.renderers.includes(s.template_kind ?? '');
+                  return (
+                    <button key={s.id} className={`sty${s.id === styleId ? ' sel' : ''}`} aria-pressed={s.id === styleId} onClick={() => setStyleId(s.id === styleId ? null : s.id)}>
+                      <StylePreview assetId={s.preview_asset_id} motif={s.motif} />
+                      <span className="sel-mark" style={{ position: 'absolute', top: 10, left: 10 }}><Icon name="check" /></span>
+                      <span className="sty-b"><b>{s.name}</b><p>{s.description}</p>{!ok && <span className="muted" style={{ fontSize: 11.5 }}>Production template not built yet</span>}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <Empty icon="palette" title={`No approved ${T.name} styles yet`} action={can('styles.manage') ? <a className="btn sm" {...linkProps(`/styles?category=${type}&new=1`)}><Icon name="plus" size={16} />Add a style</a> : undefined}>
+                ABET’s creative styles are built from your own references. {can('styles.manage') ? 'Upload references to start a new style.' : 'An admin adds them in Creative Styles.'}
+              </Empty>
+            )}
+          </div></section>
+
+          {caps && !caps.claudeApi && <Notice icon="info">The Claude API isn’t connected yet, so Claude writes through the <b>Claude queue</b>: someone with Claude asks it to “write scripts for everything in the ABET Content OS Claude queue”, and the result appears here automatically.</Notice>}
+          <div className="wiz-foot">
+            <button className="btn" disabled={!topic.trim() || !!busy || !can('content.create')} onClick={() => start('script')} title="Claude writes the script; you or your editors produce it">{busy === 'script' ? <Icon name="loader" spin size={16} /> : <Icon name="file" />}Write script only</button>
+            <div className="r">
+              <button className="btn primary" style={{ height: 44 }} disabled={!topic.trim() || !functional || !!busy || !can('content.create')}
+                title={!style ? 'Choose an approved style' : !functional ? 'This style’s production template isn’t built yet' : undefined} onClick={() => start('full')}>
+                {busy === 'full' ? <Icon name="loader" spin size={16} /> : <Icon name="sparkles" />}Generate content</button>
+            </div>
+          </div>
         </div>
         <aside className="panel summary"><div className="panel-h"><span className="ico"><Icon name={T.icon} size={16} /></span><h3>{T.name}</h3></div>
-          <div className="panel-b"><dl><div className="sr-row"><dt>Format</dt><dd>{T.meta}</dd></div><div className="sr-row"><dt>Topic</dt><dd>{topic || '—'}</dd></div><div className="sr-row"><dt>Audience</dt><dd>{audience}</dd></div></dl></div></aside>
+          <div className="panel-b"><dl>
+            <div className="sr-row"><dt>Format</dt><dd>{T.meta}</dd></div>
+            <div className="sr-row"><dt>Topic</dt><dd>{topic || '—'}</dd></div>
+            <div className="sr-row"><dt>Style</dt><dd>{style?.name ?? '—'}</dd></div>
+            <div className="sr-row"><dt>Claude</dt><dd>{caps ? (caps.claudeApi ? 'Claude API' : 'Claude queue') : '…'}</dd></div>
+          </dl>
+          <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>Claude researches the topic, picks the audience and angle, writes the hook, script, storyboard and captions in ABET’s voice. Compliance and publishing approvals still apply.</p></div></aside>
       </div>
     </div>
   );
@@ -152,8 +216,9 @@ function ItemWizard({ id, step }: { id: string; step: Step | null }) {
 
   const approved = scripts?.find((s) => s.approved_at);
   const hasAsset = (assets?.length ?? 0) > 0;
-  const max = !approved ? 0 : !item.style_id ? 1 : !hasAsset ? 2 : item.status === 'approved' || item.status === 'completed' ? 4 : 3;
-  const auto: Step = !approved ? 'script' : !item.style_id ? 'style' : !hasAsset || item.status === 'draft' || item.status === 'in_production' ? 'produce' : item.status === 'in_review' ? 'review' : 'publish';
+  const hasStyles = data.styles.some((s) => s.content_type === item.type && s.status === 'approved' && s.active);
+  const max = !approved ? 0 : !hasAsset ? 2 : item.status === 'approved' || item.status === 'completed' ? 4 : 3;
+  const auto: Step = !approved ? 'script' : !item.style_id && hasStyles && !hasAsset ? 'style' : !hasAsset || item.status === 'draft' || item.status === 'in_production' ? 'produce' : item.status === 'in_review' ? 'review' : 'publish';
   const cur = step && STEPS.findIndex(([k]) => k === step) <= max ? step : auto;
   const curIdx = STEPS.findIndex(([k]) => k === cur);
   const goStep = (s: Step) => navigate(`/studio/${id}?step=${s}`);
@@ -166,6 +231,7 @@ function ItemWizard({ id, step }: { id: string; step: Step | null }) {
       <div className="wiz-top"><a className="back" {...linkProps('/studio')}><Icon name="arrowL" size={16} />Studio</a><Stepper current={curIdx} max={max} onGo={(n) => goStep(STEPS[n][0])} /></div>
       <div className="wiz">
         <div className="wiz-main">
+          <JobPanel itemId={item.id} onDone={() => { loadScripts(); loadAssets(); }} />
           {scripts === null || assets === null ? <Panel><div className="writing"><div className="ln" style={{ width: '50%', height: 22 }} /><div className="ln" style={{ width: '90%' }} /><div className="ln" style={{ width: '80%' }} /></div></Panel>
             : cur === 'script' ? <ScriptStep item={item} scripts={scripts} reload={loadScripts} onNext={() => goStep('style')} />
             : cur === 'style' ? <StyleStep item={item} onNext={() => goStep('produce')} onBack={() => goStep('script')} />
@@ -241,6 +307,12 @@ function ScriptStep({ item, scripts, reload, onNext }: { item: ContentItem; scri
     try { await navigator.clipboard.writeText(prompt); toast('Request copied. Paste it into Claude with Ctrl+V'); } catch { toast('Copy the request below, then paste it into Claude', 'info'); }
     window.open('https://claude.ai/new', '_blank', 'noopener');
   };
+  const caps = useCapabilities();
+  const writeWithClaude = async () => {
+    if (queueNote.trim()) await run(() => api.updateItem(item.id, { request_note: queueNote.trim() }));
+    await run(() => api.generate(item.id, 'script'), caps?.claudeApi ? 'Claude is writing the script' : 'Sent to the Claude queue');
+    await reload();
+  };
   const queue = (on: boolean) => run(() => api.updateItem(item.id, on ? { needs_script: true, request_note: queueNote.trim() || null, requested_by: profile?.id ?? null } : { needs_script: false }), on ? 'Sent to the Claude queue' : 'Removed from the Claude queue');
   const requester = data?.profiles.find((p) => p.id === item.requested_by);
 
@@ -253,13 +325,12 @@ function ScriptStep({ item, scripts, reload, onNext }: { item: ContentItem; scri
       <Panel icon="sparkles" title="Get the script">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="choice-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-            <div className="choice"><Icon name="sparkles" /><b>Ask Claude yourself</b><p>For people with Claude. Copies the request and opens a new Claude chat: paste it, and Claude saves the script here.</p>
-              <button className="btn primary sm" style={{ alignSelf: 'flex-start' }} onClick={openClaude}><Icon name="external" size={16} />Copy request and open Claude</button></div>
-            <div className="choice"><Icon name="users" /><b>Send to the Claude queue</b><p>No Claude account? Add a note and send it. Whoever runs the queue in Claude writes the script, and you get a notification.</p>
-              {!item.needs_script ? <>
-                <input className="input" placeholder="Note for Claude (optional), e.g. keep it under 45 seconds" value={queueNote} onChange={(e) => setQueueNote(e.target.value)} aria-label="Note for Claude" disabled={!canEdit} />
-                <button className="btn sm" style={{ alignSelf: 'flex-start' }} disabled={!canEdit} onClick={() => queue(true)}><Icon name="send" size={16} />Send to queue</button></>
-                : <Chip cls="st-Generating" icon="clock">Waiting for Claude</Chip>}</div>
+            <div className="choice" style={{ gridColumn: '1 / -1' }}><Icon name="sparkles" /><b>Write with Claude</b><p>Claude researches the topic and writes the full script and captions in ABET’s voice. {caps ? (caps.claudeApi ? 'It runs right here and takes about a minute.' : 'The Claude API isn’t connected yet, so this goes to the Claude queue and appears here when someone with Claude runs it.') : ''}</p>
+              {!item.needs_script ? <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input className="input" style={{ flex: 1, minWidth: 220 }} placeholder="Note for Claude (optional), e.g. keep it under 45 seconds" value={queueNote} onChange={(e) => setQueueNote(e.target.value)} aria-label="Note for Claude" disabled={!canEdit} />
+                <button className="btn primary sm" disabled={!canEdit} onClick={writeWithClaude}><Icon name="sparkles" size={16} />Write with Claude</button></div>
+                : <Chip cls="st-Generating" icon="clock">Waiting for Claude</Chip>}
+              <button className="link" style={{ alignSelf: 'flex-start', fontSize: 12 }} onClick={openClaude}>Or copy the request into your own Claude chat</button></div>
             <div className="choice"><Icon name="copy" /><b>Paste a script</b><p>Already have a script? Paste it in. Blank lines separate the scenes.</p>
               <button className="btn sm" style={{ alignSelf: 'flex-start' }} onClick={() => setMode('paste')} disabled={!canEdit}><Icon name="edit" size={16} />Paste a script</button></div>
             <div className="choice"><Icon name="file" /><b>Start from a template</b><p>A compliant starting structure for this format. Edit it into the final script.</p>
@@ -319,11 +390,10 @@ function ScriptStep({ item, scripts, reload, onNext }: { item: ContentItem; scri
 
 /* ------------------------------------------------------------------ step: style */
 function StyleStep({ item, onNext, onBack }: { item: ContentItem; onNext: () => void; onBack: () => void }) {
-  const { data, api, run } = useStore();
+  const { data, api, run, can } = useStore();
   const T = TYPES[item.type];
-  const list = (data?.styles ?? []).filter((s) => s.category === T.cat || (item.type === 'explainer' && s.category === 'motion'));
-  const rec = list.find((s) => s.name === REC_STYLE[item.type]);
-  const [sel, setSel] = useState(item.style_id ?? rec?.id ?? list[0]?.id ?? null);
+  const list = (data?.styles ?? []).filter((s) => s.content_type === item.type && s.status === 'approved' && s.active && !s.archived);
+  const [sel, setSel] = useState(item.style_id ?? null);
   const chosen = list.find((s) => s.id === sel);
   const next = async () => {
     if (sel !== item.style_id) { const r = await run(() => api.updateItem(item.id, { style_id: sel })); if (!r) return; }
@@ -332,20 +402,57 @@ function StyleStep({ item, onNext, onBack }: { item: ContentItem; onNext: () => 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-        <div><h2 style={{ fontSize: 18 }}>Choose a creative style</h2><p className="muted" style={{ marginTop: 2 }}>{list.length} {STYLE_CATS.find((c) => c[0] === T.cat)?.[1].toLowerCase()} styles.</p></div>
-        <a className="link" style={{ marginLeft: 'auto' }} {...linkProps('/styles')}><Icon name="upload" />Upload a reference</a>
+        <div><h2 style={{ fontSize: 18 }}>Choose a creative style</h2><p className="muted" style={{ marginTop: 2 }}>{list.length} approved {T.name} style{list.length === 1 ? '' : 's'}.</p></div>
+        {can('styles.manage') && <a className="link" style={{ marginLeft: 'auto' }} {...linkProps(`/styles?category=${item.type}&new=1`)}><Icon name="plus" />Add a style</a>}
       </div>
-      <div className="gallery">
-        {list.map((s) => (
-          <button key={s.id} className={`sty${s.id === sel ? ' sel' : ''}`} aria-pressed={s.id === sel} onClick={() => setSel(s.id)}>
-            <Thumb motif={s.motif}>{s.id === rec?.id && <span className="rec">Recommended</span>}<span className="sel-mark"><Icon name="check" /></span></Thumb>
-            <span className="sty-b"><b>{s.name}</b><p>{s.description}</p></span>
-          </button>
-        ))}
-      </div>
-      {chosen && <details className="specs"><summary><Icon name="chevR" size={16} />{chosen.name}: technical specifications</summary><dl className="spec">{chosen.spec.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></details>}
-      <div className="wiz-foot"><button className="btn" onClick={onBack}><Icon name="arrowL" />Script</button><div className="r"><button className="btn primary" disabled={!sel} onClick={next}>Continue<Icon name="arrowR" /></button></div></div>
+      {list.length ? (
+        <div className="gallery">
+          {list.map((s) => (
+            <button key={s.id} className={`sty${s.id === sel ? ' sel' : ''}`} aria-pressed={s.id === sel} onClick={() => setSel(s.id)}>
+              <StylePreview assetId={s.preview_asset_id} motif={s.motif} />
+              <span className="sel-mark" style={{ position: 'absolute', top: 10, left: 10 }}><Icon name="check" /></span>
+              <span className="sty-b"><b>{s.name}</b><p>{s.description}</p></span>
+            </button>
+          ))}
+        </div>
+      ) : <div className="panel"><Empty icon="palette" title={`No approved ${T.name} styles yet`}>You can continue without a style; your editors produce it from the brief.</Empty></div>}
+      {chosen && chosen.spec.length > 0 && <details className="specs"><summary><Icon name="chevR" size={16} />{chosen.name}: creative specifications</summary><dl className="spec">{chosen.spec.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></details>}
+      <div className="wiz-foot"><button className="btn" onClick={onBack}><Icon name="arrowL" />Script</button><div className="r"><button className="btn primary" onClick={next}>{sel ? 'Continue' : 'Continue without a style'}<Icon name="arrowR" /></button></div></div>
     </>
+  );
+}
+
+/* ------------------------------------------------------------------ live production progress */
+function JobPanel({ itemId, onDone }: { itemId: string; onDone: () => void }) {
+  const { api, refresh } = useStore();
+  const [jobs, setJobs] = useState<ProductionJob[]>([]);
+  const prev = useRef<string | null>(null);
+  const load = useCallback(async () => {
+    const j = await api.listJobs(itemId).catch(() => []);
+    setJobs(j);
+    const st = j[0]?.status ?? null;
+    if (prev.current && prev.current !== st && (st === 'succeeded' || st === 'failed')) { onDone(); refresh(); }
+    prev.current = st;
+  }, [api, itemId, onDone, refresh]);
+  useEffect(() => { load(); }, [load]);
+  const job = jobs[0];
+  const live = job && ['queued', 'running', 'waiting_for_claude'].includes(job.status);
+  useEffect(() => { if (!live) return; const t = setInterval(load, job.status === 'waiting_for_claude' ? 10000 : 3000); return () => clearInterval(t); }, [live, load, job?.status]);
+  if (!job || (job.status === 'succeeded' && Date.now() - new Date(job.updated_at).getTime() > 10 * 60000)) return null;
+  const cls = job.status === 'failed' ? 'err' : job.status === 'succeeded' ? 'ok' : '';
+  return (
+    <section className="panel"><div className="panel-b" style={{ paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span className="ico"><Icon name={job.status === 'failed' ? 'alert' : job.status === 'succeeded' ? 'checkc' : 'loader'} spin={live} /></span>
+        <b style={{ fontWeight: 500 }}>{job.status === 'waiting_for_claude' ? 'Waiting for Claude (Claude queue)' : job.stage}</b>
+        <span className="muted num" style={{ marginLeft: 'auto', fontSize: 12.5 }}>{job.progress}%</span>
+      </div>
+      <div className={`bar ${cls === 'err' ? 'brand' : 'gen'}`}><span style={{ width: `${job.progress}%` }} /></div>
+      <div className="checks">{job.steps.map((s, n) => <div key={n} className={`check ${s.status === 'failed' ? 'bad' : 'ok'}`}><Icon name={s.status === 'failed' ? 'xc' : s.status === 'running' ? 'loader' : s.status === 'warning' ? 'alert' : 'checkc'} size={16} spin={s.status === 'running'} /><span>{s.name}{s.detail ? ` · ${s.detail}` : ''}</span></div>)}</div>
+      {job.status === 'failed' && <Notice kind="err" icon="alert">{job.error}</Notice>}
+      {job.status === 'waiting_for_claude' && <p className="muted" style={{ fontSize: 12.5 }}>Someone with Claude asks it to “write scripts for everything in the ABET Content OS Claude queue”. You can leave this page; you’ll get a notification.</p>}
+      {live && job.status !== 'waiting_for_claude' && <p className="muted" style={{ fontSize: 12.5 }}>You can leave this page. Production continues and you’ll get a notification.</p>}
+    </div></section>
   );
 }
 

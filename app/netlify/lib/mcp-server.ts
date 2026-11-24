@@ -64,13 +64,14 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'list_styles', title: 'List creative styles',
-    description: 'Lists ABET’s creative styles (video editing, motion graphics, graphic design, ads, PDF templates) with their specifications.',
-    inputSchema: { type: 'object', properties: { category: { type: 'string', enum: ['video', 'motion', 'graphic', 'ad', 'pdf'], description: 'Optional filter' } } },
+    description: 'Lists ABET’s approved, active creative styles for a content category, with their creative specifications. Styles come only from ABET’s own references; never invent one.',
+    inputSchema: { type: 'object', properties: { category: typeEnum } },
     annotations: { readOnlyHint: true },
     run: async (a, ctx) => {
-      let q = ctx.db.from('styles').select('id,category,name,description,complexity,spec').eq('archived', false).order('category');
-      if (a.category) q = q.eq('category', a.category as string);
-      return must(await q, 'Listing styles');
+      let q = ctx.db.from('styles').select('id,content_type,name,description,spec,output_formats').eq('archived', false).eq('status', 'approved').eq('active', true).order('content_type');
+      if (a.category) q = q.eq('content_type', a.category as string);
+      const rows = must(await q, 'Listing styles') as Json[];
+      return rows.length ? rows : { styles: [], note: 'No approved styles yet for this category. Write a style-neutral script.' };
     },
   },
   {

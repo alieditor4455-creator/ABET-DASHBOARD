@@ -7,7 +7,8 @@ export type Permission =
   | 'content.create' | 'content.edit_any' | 'content.approve' | 'content.compliance'
   | 'content.publish' | 'styles.manage' | 'team.manage' | 'settings.manage';
 
-export type ContentType = 'reel' | 'yt' | 'explainer' | 'motion' | 'graphic' | 'carousel' | 'poster' | 'ad' | 'pdf';
+/** Six content categories: reel = Short Form, yt = Long Form, explainer, pdf, carousel, ad = Ads. */
+export type ContentType = 'reel' | 'yt' | 'explainer' | 'pdf' | 'carousel' | 'ad';
 export type Status = 'draft' | 'in_production' | 'in_review' | 'approved' | 'completed';
 export type StyleCategory = 'video' | 'motion' | 'graphic' | 'ad' | 'pdf';
 export type Platform = 'IG' | 'FB' | 'YT' | 'TT' | 'LI' | 'X';
@@ -18,6 +19,17 @@ export interface Invitation { email: string; role: Role; created_at: string; acc
 export interface Style {
   id: string; category: StyleCategory; name: string; description: string; motif: string;
   complexity: 'Low' | 'Medium' | 'High'; spec: [string, string][]; is_custom: boolean; archived: boolean;
+  content_type: ContentType | null; status: StyleStatus; active: boolean;
+  reference_asset_ids: string[]; preview_asset_id: string | null;
+  template_kind: string | null; template_version: number; output_formats: string[];
+  required_assets: string[]; execution_config: Record<string, unknown>;
+  approved_by?: string | null; approved_at?: string | null;
+}
+export type StyleStatus = 'draft' | 'in_development' | 'pending_approval' | 'approved';
+export interface ProductionJob {
+  id: string; item_id: string; style_id: string | null; status: 'queued' | 'running' | 'succeeded' | 'failed' | 'waiting_for_claude';
+  stage: string; progress: number; steps: { name: string; status: string; at?: string; detail?: string }[];
+  error: string | null; result_asset_id: string | null; engine: string | null; created_by: string; created_at: string; updated_at: string;
 }
 
 export interface ContentItem {

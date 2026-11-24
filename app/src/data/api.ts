@@ -1,5 +1,5 @@
 import type {
-  Activity, Asset, Caption, Comment, MfaFactor, Notification, ContentItem, ContentType, Invitation, Platform, Profile, Role, Script, ScriptUnit,
+  Activity, Asset, Caption, Comment, MfaFactor, Notification, ProductionJob, ContentItem, ContentType, Invitation, Platform, Profile, Role, Script, ScriptUnit,
   Session, Settings, SocialConnection, Style,
 } from '../lib/types';
 
@@ -61,6 +61,11 @@ export interface Api {
   signOutOthers(): Promise<void>;
   claudeConnections(): Promise<{ connected_at: string; client_id: string | null }[]>;
   exportAll(): Promise<Record<string, unknown>>;
+  // production
+  capabilities(): Promise<{ claudeApi: boolean; renderers: string[] }>;
+  listJobs(itemId: string): Promise<ProductionJob[]>;
+  /** Starts generation. mode 'full' = script + render with the item's style; 'script' = script only. */
+  generate(itemId: string, mode: 'full' | 'script'): Promise<{ jobId: string; engine: 'claude-api' | 'claude-queue' }>;
   /** Real health checks used by AI & Integrations. */
   health(): Promise<{ database: boolean; storage: boolean; detail?: string }>;
 }

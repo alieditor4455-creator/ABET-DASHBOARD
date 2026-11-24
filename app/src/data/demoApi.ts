@@ -4,7 +4,7 @@
  * database triggers so the app behaves the same way.
  */
 import type { Api, ItemPatch, NewItem, NewScript, Snapshot } from './api';
-import type { Activity, Asset, Caption, Comment, ContentItem, Invitation, Notification, Permission, Profile, Script, Session, Settings, SocialConnection, Style } from '../lib/types';
+import type { Activity, Asset, Caption, Comment, ContentItem, Invitation, Notification, ProductionJob, Permission, Profile, Script, Session, Settings, SocialConnection, Style } from '../lib/types';
 import { ROLE_PERMS } from '../lib/constants';
 import { templateScript } from '../lib/script';
 import seedStyles from './styleSeed.json';
@@ -25,8 +25,11 @@ export function createDemoApi(): Api {
     { id: 'demo-mq', full_name: 'Mariam Q.', role: 'compliance_reviewer', active: true },
     { id: 'demo-new', full_name: 'New sign-up', role: 'viewer', active: false },
   ];
-  const styles: Style[] = (seedStyles as Omit<Style, 'id' | 'is_custom' | 'archived'>[]).map((s) => ({ ...s, id: uuid(), is_custom: false, archived: false }));
-  const sid = (name: string) => styles.find((s) => s.name === name)?.id ?? null;
+  // No preset styles: categories start empty until ABET's own reference-based styles are approved.
+  void seedStyles;
+  const styles: Style[] = [];
+  const sid = (_name: string): string | null => null;
+  const jobs: ProductionJob[] = [];
   const mk = (title: string, type: ContentItem['type'], style: string, owner: string, status: ContentItem['status'], upd: number, extra: Partial<ContentItem> = {}): ContentItem => ({
     id: uuid(), title, topic: title, type, style_id: sid(style), owner_id: owner, status, platforms: [], scheduled_at: null, published_at: null,
     compliance_note: null, audience: 'Complete beginners', objective: 'Education', needs_script: false, request_note: null, requested_by: null, created_by: owner, created_at: minsAgo(upd + 600), updated_at: minsAgo(upd), ...extra,
@@ -38,11 +41,11 @@ export function createDemoApi(): Api {
     mk('MT5 walkthrough: your first demo order', 'yt', 'Screen Recording Tutorials', 'demo-oa', 'in_production', 20),
     mk('Reading a candlestick in three steps', 'reel', 'Kinetic Typography', 'demo-oa', 'in_review', 95),
     mk('Stop-loss basics for beginners', 'reel', 'Premium Minimalist', 'demo-hk', 'draft', 40, { needs_script: true, request_note: 'Keep it under 45 seconds', requested_by: 'demo-hk' }),
-    mk('Trading sessions: Tokyo, London, New York', 'poster', 'Market Hours Infographic', 'demo-sm', 'approved', 240),
+    mk('Trading sessions: Tokyo, London, New York', 'ad', 'Market Hours Infographic', 'demo-sm', 'approved', 240),
     mk("Beginner's forex glossary", 'pdf', 'Beginner Guide', 'demo-sm', 'in_production', 5),
     mk('Try MT5 on a demo account', 'ad', 'Demo Account Offer', 'demo-oa', 'in_review', 25),
     mk('Why interest rates move currencies', 'explainer', 'Financial Chart Explainers', 'demo-hk', 'draft', 130),
-    mk('Gold and the US dollar', 'motion', 'Financial Chart Animation', 'demo-zr', 'approved', 200),
+    mk('Gold and the US dollar', 'reel', 'Financial Chart Animation', 'demo-zr', 'approved', 200),
     mk('Five beginner mistakes to avoid', 'reel', 'UGC Authentic', 'demo-bt', 'completed', 7400, { platforms: ['IG', 'TT'], scheduled_at: inDays(-5, 18), published_at: inDays(-5, 18) }),
     mk('Demo vs. live account', 'reel', 'Split-Screen Comparison', 'demo-bt', 'completed', 900, { platforms: ['IG', 'FB'], scheduled_at: inDays(4, 17) }),
     mk('Gold week in review', 'reel', 'Fast-Paced Social', 'demo-bt', 'completed', 600, { platforms: ['IG', 'X'], scheduled_at: inDays(5, 10) }),
@@ -139,7 +142,7 @@ export function createDemoApi(): Api {
     async saveStyle(s) {
       if (!can('styles.manage')) fail('permission denied');
       if (s.id) { const x = styles.find((y) => y.id === s.id) ?? fail('Not found'); Object.assign(x, s); return { ...x }; }
-      const n: Style = { description: '', motif: 'mini', complexity: 'Medium', spec: [], is_custom: true, archived: false, ...s, id: uuid() } as Style;
+      const n: Style = { description: '', motif: 'mini', complexity: 'Medium', spec: [], is_custom: true, archived: false, content_type: null, status: 'draft', active: false, reference_asset_ids: [], preview_asset_id: null, template_kind: null, template_version: 0, output_formats: [], required_assets: [], execution_config: {}, ...s, id: uuid() } as Style;
       styles.push(n); return n;
     },
     async updateProfile(id, patch) {
@@ -163,6 +166,14 @@ export function createDemoApi(): Api {
     async signOutOthers() {},
     async claudeConnections() { return [{ connected_at: minsAgo(600), client_id: 'claude-demo' }]; },
     async exportAll() { settings = { ...settings, last_backup_at: new Date().toISOString() }; return { exported_at: new Date().toISOString(), source: 'ABET Content OS (demo)', profiles, styles, content_items: items, scripts, captions, comments, assets, activity }; },
+    async capabilities() { return { claudeApi: false, renderers: [] }; },
+    async listJobs(itemId) { return jobs.filter((j) => j.item_id === itemId); },
+    async generate(itemId) {
+      const it = items.find((i) => i.id === itemId) ?? fail('Not found');
+      it.needs_script = true; it.requested_by = me.id;
+      const j: ProductionJob = { id: uuid(), item_id: itemId, style_id: it.style_id, status: 'waiting_for_claude', stage: 'Waiting for Claude', progress: 10, steps: [{ name: 'Sent to the Claude queue', status: 'done', at: new Date().toISOString() }], error: null, result_asset_id: null, engine: 'claude-queue', created_by: me.id, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+      jobs.unshift(j); return { jobId: j.id, engine: 'claude-queue' as const };
+    },
     async health() { return { database: true, storage: true, detail: 'Demo mode: data lives in this browser tab.' }; },
   };
   return api;

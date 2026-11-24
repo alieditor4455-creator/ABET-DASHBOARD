@@ -1,4 +1,4 @@
-import type { ContentType, Permission, Platform, Role, Status, StyleCategory } from './types';
+import type { ContentType, Permission, Platform, Role, Status, StyleCategory, StyleStatus } from './types';
 
 export interface TypeInfo {
   name: string; short: string; desc: string; icon: string; meta: string; cat: StyleCategory;
@@ -6,15 +6,12 @@ export interface TypeInfo {
 }
 
 export const TYPES: Record<ContentType, TypeInfo> = {
-  reel: { name: 'Reels / Shorts', short: 'Reel', desc: 'Vertical videos for Instagram, TikTok and YouTube Shorts.', icon: 'clap', meta: '9:16 · 15–90 seconds', cat: 'video', unit: 'Scene', kind: 'Video', ratio: '916', platforms: ['IG', 'TT', 'YT', 'FB', 'LI', 'X'] },
-  yt: { name: 'YouTube Videos', short: 'YouTube', desc: 'Long-form education, tutorials and webinars.', icon: 'yt', meta: '16:9 · 3–15 minutes', cat: 'video', unit: 'Chapter', kind: 'Video', ratio: '169', platforms: ['YT', 'LI', 'FB'] },
-  explainer: { name: 'Explainer Videos', short: 'Explainer', desc: 'Concepts made clear with charts and simple visuals.', icon: 'present', meta: '16:9 or 9:16 · 1–3 minutes', cat: 'video', unit: 'Scene', kind: 'Video', ratio: '169', platforms: ['YT', 'IG', 'LI', 'FB', 'X'] },
-  motion: { name: 'Motion Graphics', short: 'Motion', desc: 'Animated type, data and interface sequences.', icon: 'shapes', meta: 'Any ratio · 10–60 seconds', cat: 'motion', unit: 'Scene', kind: 'Video', ratio: '916', platforms: ['IG', 'TT', 'YT', 'LI', 'FB', 'X'] },
-  graphic: { name: 'Graphic Design', short: 'Graphic', desc: 'Single social posts, thumbnails and banners.', icon: 'image', meta: '1:1 · 4:5 · 16:9', cat: 'graphic', unit: 'Block', kind: 'Graphic', ratio: '45', platforms: ['IG', 'FB', 'LI', 'X'] },
-  carousel: { name: 'Carousels', short: 'Carousel', desc: 'Swipeable, step-by-step educational slides.', icon: 'carousel', meta: '4:5 · 5–10 slides', cat: 'graphic', unit: 'Slide', kind: 'Graphic', ratio: '45', platforms: ['IG', 'LI', 'FB'] },
-  poster: { name: 'Posters', short: 'Poster', desc: 'Announcements, market hours and event visuals.', icon: 'poster', meta: '4:5 · A4 print', cat: 'graphic', unit: 'Block', kind: 'Graphic', ratio: '45', platforms: ['IG', 'FB', 'LI', 'X'] },
-  ad: { name: 'Advertisements', short: 'Ad', desc: 'Paid creatives for Meta, YouTube and LinkedIn.', icon: 'megaphone', meta: 'Platform sizes · A/B variants', cat: 'ad', unit: 'Variant', kind: 'Video', ratio: '916', platforms: ['IG', 'FB', 'YT', 'LI'] },
-  pdf: { name: 'PDFs', short: 'PDF', desc: 'Guides, checklists and e-books with ABET branding.', icon: 'file', meta: 'A4 · 4–30 pages', cat: 'pdf', unit: 'Section', kind: 'PDF', ratio: 'a4', platforms: [] },
+  reel: { name: 'Short Form', short: 'Short Form', desc: 'Reels, Shorts and TikTok.', icon: 'clap', meta: '9:16 · 15–90 seconds', cat: 'video', unit: 'Scene', kind: 'Video', ratio: '916', platforms: ['IG', 'TT', 'YT', 'FB', 'LI', 'X'] },
+  yt: { name: 'Long Form', short: 'Long Form', desc: 'YouTube and educational videos.', icon: 'yt', meta: '16:9 · 3–15 minutes', cat: 'video', unit: 'Chapter', kind: 'Video', ratio: '169', platforms: ['YT', 'LI', 'FB'] },
+  explainer: { name: 'Explainer Videos', short: 'Explainer', desc: 'Concepts made clear with visuals and motion.', icon: 'present', meta: '16:9 or 9:16 · 1–3 minutes', cat: 'video', unit: 'Scene', kind: 'Video', ratio: '169', platforms: ['YT', 'IG', 'LI', 'FB', 'X'] },
+  pdf: { name: 'PDFs', short: 'PDF', desc: 'Guides, checklists and e-books.', icon: 'file', meta: 'A4 · 4–30 pages', cat: 'pdf', unit: 'Section', kind: 'PDF', ratio: 'a4', platforms: [] },
+  carousel: { name: 'Carousels', short: 'Carousel', desc: 'Swipeable, step-by-step slides.', icon: 'carousel', meta: '4:5 · 5–10 slides', cat: 'graphic', unit: 'Slide', kind: 'Graphic', ratio: '45', platforms: ['IG', 'LI', 'FB'] },
+  ad: { name: 'Ads', short: 'Ad', desc: 'Video ads and static promotional creatives.', icon: 'megaphone', meta: 'Platform sizes · video or static', cat: 'ad', unit: 'Variant', kind: 'Video', ratio: '916', platforms: ['IG', 'FB', 'YT', 'LI'] },
 };
 export const TYPE_KEYS = Object.keys(TYPES) as ContentType[];
 
@@ -29,15 +26,11 @@ export const STATUS_COLOR: Record<Status, string> = {
   draft: 'var(--s-draft)', in_production: 'var(--s-gen)', in_review: 'var(--s-review)', approved: 'var(--s-ok)', completed: 'var(--s-done)',
 };
 
-export const STYLE_CATS: [StyleCategory, string, string][] = [
-  ['video', 'Video editing', 'film'], ['motion', 'Motion graphics', 'shapes'], ['graphic', 'Graphic design', 'image'],
-  ['ad', 'Advertisements', 'megaphone'], ['pdf', 'PDF templates', 'file'],
-];
-
-export const REC_STYLE: Record<ContentType, string> = {
-  reel: 'High-Retention Educational', yt: 'Screen Recording Tutorials', explainer: 'Financial Chart Explainers',
-  motion: 'Financial Chart Animation', graphic: 'Clean Editorial Post', carousel: 'Step-by-Step Carousel',
-  poster: 'Market Hours Infographic', ad: 'Demo Account Offer', pdf: 'Beginner Guide',
+export const STYLE_STATUS: Record<StyleStatus, { label: string; cls: string }> = {
+  draft: { label: 'Draft', cls: 'st-Draft' },
+  in_development: { label: 'In development', cls: 'st-Generating' },
+  pending_approval: { label: 'Awaiting approval', cls: 'st-InReview' },
+  approved: { label: 'Approved', cls: 'st-Approved' },
 };
 
 export const PLAT: Record<Platform, string> = { IG: 'Instagram', FB: 'Facebook', YT: 'YouTube', TT: 'TikTok', LI: 'LinkedIn', X: 'X' };

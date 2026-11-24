@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../data/store';
 import { Icon } from '../components/Icon';
 import { Avatar, Chip, Empty, Modal, Notice, Panel, Switch } from '../components/ui';
-import { HANDLES, PERM_LABEL, PLAT, PLAT_KEYS, ROLES, ROLE_LABEL, ROLE_PERMS, STYLE_CATS } from '../lib/constants';
+import { HANDLES, PERM_LABEL, PLAT, PLAT_KEYS, ROLES, ROLE_LABEL, ROLE_PERMS, TYPES, TYPE_KEYS } from '../lib/constants';
 import { ago } from '../lib/format';
 import { linkProps, navigate } from '../lib/router';
 import type { Permission, Role } from '../lib/types';
@@ -126,10 +126,12 @@ function BrandAssets() {
 function StyleAdmin() {
   const { data } = useStore();
   if (!data) return null;
+  const live = (k: string) => data.styles.filter((s) => s.content_type === k && !s.archived);
   return (
-    <Panel icon="palette" title="Creative styles" right={<a className="link" {...linkProps('/styles')}>Open library <Icon name="arrowR" /></a>} bodyClass="">
-      <div className="list" style={{ marginTop: 12 }}><table className="tbl"><thead><tr><th>Category</th><th>Styles</th><th>Custom</th></tr></thead><tbody>
-        {STYLE_CATS.map(([k, l]) => <tr key={k} style={{ cursor: 'pointer' }} onClick={() => navigate('/styles')}><td>{l}</td><td className="num">{data.styles.filter((s) => s.category === k).length}</td><td className="num">{data.styles.filter((s) => s.category === k && s.is_custom).length}</td></tr>)}
+    <Panel icon="palette" title="Creative styles" right={<a className="link" {...linkProps('/styles')}>Manage styles <Icon name="arrowR" /></a>} bodyClass="">
+      <div className="list" style={{ marginTop: 12 }}><table className="tbl"><thead><tr><th>Category</th><th>Approved and active</th><th>In progress</th></tr></thead><tbody>
+        {TYPE_KEYS.map((k) => <tr key={k} style={{ cursor: 'pointer' }} onClick={() => navigate(`/styles?category=${k}`)}><td>{TYPES[k].name}</td>
+          <td className="num">{live(k).filter((s) => s.status === 'approved' && s.active).length}</td><td className="num">{live(k).filter((s) => s.status !== 'approved').length}</td></tr>)}
       </tbody></table></div>
     </Panel>
   );
