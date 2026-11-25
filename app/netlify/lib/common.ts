@@ -7,7 +7,7 @@ export const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? 'sb_publishabl
 export const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type, Mcp-Protocol-Version, Mcp-Session-Id',
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, Mcp-Protocol-Version, Mcp-Session-Id, X-Abet-Worker-Key',
   'Access-Control-Expose-Headers': 'WWW-Authenticate, Mcp-Session-Id',
 };
 

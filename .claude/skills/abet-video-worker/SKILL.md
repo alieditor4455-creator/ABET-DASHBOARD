@@ -5,6 +5,14 @@ description: Make the videos, carousels, PDFs and ads waiting in the ABET Conten
 
 # ABET video worker
 
+**Reaching the dashboard:** use the ABET Content OS connector tools if they are in your tool list. If they aren't (scheduled runs), call every tool the same way through the helper, which signs in as the "Claude Worker" account:
+
+```
+node video/abet.mjs <tool> '<json arguments>'     # e.g. node video/abet.mjs get_video_queue
+```
+
+It prints the tool's result as JSON, or an error and exit code 1. Tool names and arguments are the same as below.
+
 The ABET dashboard (abet-dashboard.netlify.app) does not render anything. Team members request a video, carousel, PDF or ad there; **you make it** with the templates in `video/` and deliver it back through the ABET Content OS connector. Work fully on your own: nobody is watching a scheduled run.
 
 ## 1. Check the queue
