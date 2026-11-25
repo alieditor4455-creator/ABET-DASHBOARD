@@ -165,6 +165,14 @@ export function createSupabaseApi(url: string, key: string): Api {
     },
     async mfaRemove(factorId) { const r = await sb.auth.mfa.unenroll({ factorId }); if (r.error) throw new Error(r.error.message); },
     async signOutOthers() { const r = await sb.auth.signOut({ scope: 'others' }); if (r.error) throw new Error(r.error.message); },
+    async workerStatus() {
+      const count = async (st: string) => (await sb.from('production_jobs').select('id', { count: 'exact', head: true }).eq('kind', 'video').eq('status', st)).count ?? 0;
+      const [waiting, running] = await Promise.all([count('waiting_for_claude'), count('running')]);
+      const sr = await sb.from('styles').select('id', { count: 'exact', head: true }).not('claude_requested_at', 'is', null).is('claude_built_at', null).eq('archived', false);
+      const last = await sb.from('production_jobs').select('updated_at,status,worker').eq('kind', 'video').in('status', ['succeeded', 'failed']).order('updated_at', { ascending: false }).limit(1);
+      const l = (last.data ?? [])[0] as { updated_at: string; status: string; worker: string | null } | undefined;
+      return { waiting, running, styleRequests: sr.count ?? 0, last: l ? { at: l.updated_at, status: l.status, worker: l.worker } : null };
+    },
     async claudeConnections() { return ok(await sb.rpc('my_claude_connections')) as { connected_at: string; client_id: string | null }[]; },
     async exportAll() {
       const tables = ['profiles', 'invitations', 'styles', 'content_items', 'scripts', 'captions', 'comments', 'approvals', 'assets', 'activity', 'app_settings', 'social_connections'];

@@ -65,6 +65,8 @@ export interface Api {
   mfaRemove(factorId: string): Promise<void>;
   signOutOthers(): Promise<void>;
   claudeConnections(): Promise<{ connected_at: string; client_id: string | null }[]>;
+  /** Claude video worker status: queue sizes and the last finished request. */
+  workerStatus(): Promise<{ waiting: number; running: number; styleRequests: number; last: { at: string; status: string; worker: string | null } | null }>;
   exportAll(): Promise<Record<string, unknown>>;
   // production
   capabilities(): Promise<{ claudeApi: boolean; renderers: string[] }>;
