@@ -28,16 +28,23 @@ export function createDemoApi(): Api {
   // No preset styles: categories start empty until ABET's own reference-based styles are approved.
   void seedStyles;
   // The same six starter styles the database update adds (made by Claude from the video queue).
-  const starter = (name: string, category: Style['category'], content_type: ContentType, motif: string, description: string, theme: string, outputs: string[], aspects: string[], lengths: string[], output_formats: string[]): Style => ({
-    id: uuid(), category, name, description, motif, complexity: 'Medium', spec: [['Look', theme === 'light' ? 'Light canvas, ink text, ABET red accents' : theme === 'dark' ? 'Near-black canvas, red glow, white type' : 'ABET red background, white type']], is_custom: true, archived: false,
-    content_type, status: 'approved', active: true, reference_asset_ids: [], preview_asset_id: null, template_kind: 'claude:abet-motion', template_version: 1,
-    output_formats, required_assets: [], execution_config: { engine: 'claude', template: 'abet-motion', theme, outputs, aspects, lengths },
+  const starter = (name: string, category: Style['category'], content_type: ContentType, motif: string, description: string, theme: string, outputs: string[], aspects: string[], lengths: string[], output_formats: string[], template = 'abet-motion'): Style => ({
+    id: uuid(), category, name, description, motif, complexity: 'Medium', spec: [['Look', theme === 'light' ? 'Light canvas, ink text, ABET red accents' : 'Near-black canvas with slow red, teal and blue light'], ['Motion', 'Blur-to-focus entrances, word-by-word headlines, soft dissolves']], is_custom: true, archived: false,
+    content_type, status: 'approved', active: true, reference_asset_ids: [], preview_asset_id: null, template_kind: `claude:${template}`, template_version: 1,
+    output_formats, required_assets: [], execution_config: { engine: 'claude', template, theme, outputs, aspects, lengths, preview: template === 'cinema' ? `/style-previews/${theme === 'dark' ? 'cinematic-dark' : 'light-glass'}.jpg` : outputs[0] === 'pdf' ? '/style-previews/clean-guide.jpg' : '/style-previews/clean-carousel.jpg' },
   });
+  const DARK = 'Dark, cinematic UI motion inspired by the ABET Forex Trading Academy film';
+  const LIGHT = 'Light, airy glass UI motion in ABET white and red';
   const styles: Style[] = [
-    starter('ABET Clean Explainer', 'video', 'explainer', 'mg', 'Starter style. Light, clean motion graphics: big headings, step cards, charts and captions in ABET red and ink.', 'light', ['video'], ['16:9', '9:16', '1:1'], ['30 seconds', '60–90 seconds', '2–3 minutes'], ['16:9 MP4', '9:16 MP4', '1:1 MP4']),
-    starter('ABET Clean Chapters', 'video', 'yt', 'chart', 'Starter style. Light chaptered explainer for YouTube: chapter titles, step cards, charts and captions.', 'light', ['video'], ['16:9'], ['2–3 minutes', '3–5 minutes'], ['16:9 MP4']),
-    starter('ABET Bold Kinetic', 'video', 'reel', 'typeled', 'Starter style. Bold ABET-red reels with big kinetic type and fast scenes for Reels, Shorts and TikTok.', 'bold', ['video'], ['9:16', '1:1', '4:5'], ['15 seconds', '30 seconds', '45–60 seconds'], ['9:16 MP4', '1:1 MP4', '4:5 MP4']),
-    starter('ABET Premium Dark Ad', 'ad', 'ad', 'ad', 'Starter style. Dark premium ads with a red glow, a clear offer and a strong call to action. Video or static.', 'dark', ['video', 'image'], ['9:16', '1:1', '4:5', '16:9'], ['6 seconds', '15 seconds', '30 seconds'], ['9:16 MP4', '1:1 MP4', '1:1 PNG']),
+    ...(['dark', 'light'] as const).flatMap((th) => {
+      const L = th === 'dark' ? 'Cinematic Dark' : 'Light Glass', d = th === 'dark' ? DARK : LIGHT, m = th === 'dark' ? 'cine' : 'mg';
+      return [
+        starter(`${L} Explainer`, 'video', 'explainer', m, `${d}. Phone screens, glass cards, orbiting icons and word-by-word captions.`, th, ['video'], ['16:9', '9:16', '1:1'], ['30 seconds', '60–90 seconds', '2–3 minutes'], ['16:9 MP4', '9:16 MP4', '1:1 MP4'], 'cinema'),
+        starter(`${L} Long Form`, 'video', 'yt', m, `${d}, paced for YouTube with chapter titles.`, th, ['video'], ['16:9'], ['2–3 minutes', '3–5 minutes'], ['16:9 MP4'], 'cinema'),
+        starter(`${L} Reel`, 'video', 'reel', m, `${d}, fast vertical pacing for Reels, Shorts and TikTok.`, th, ['video'], ['9:16', '1:1', '4:5'], ['15 seconds', '30 seconds', '45–60 seconds'], ['9:16 MP4', '1:1 MP4', '4:5 MP4'], 'cinema'),
+        starter(`${L} Ad`, 'ad', 'ad', 'ad', `${d}: hook, benefit, call to action. Video or static.`, th, ['video', 'image'], ['9:16', '1:1', '4:5', '16:9'], ['6 seconds', '15 seconds', '30 seconds'], ['9:16 MP4', '1:1 MP4', '1:1 PNG'], 'cinema'),
+      ];
+    }),
     starter('ABET Clean Carousel', 'graphic', 'carousel', 'carousel', 'Starter style. Light step-by-step carousel slides with numbered cards and a swipe cue.', 'light', ['slides'], ['4:5', '1:1'], ['5 slides', '7 slides', '10 slides'], ['4:5 PNG slides']),
     starter('ABET Clean Guide', 'pdf', 'pdf', 'pdfdoc', 'Starter style. Light A4 guide: cover, clear sections, key numbers, steps and a closing page with the risk warning.', 'light', ['pdf'], ['A4'], ['4 pages', '8 pages', '12 pages'], ['A4 PDF']),
   ];

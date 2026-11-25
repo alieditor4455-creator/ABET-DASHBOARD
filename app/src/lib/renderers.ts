@@ -21,6 +21,11 @@ export interface RendererInfo {
 }
 
 export const RENDERERS: Record<string, RendererInfo> = {
+  'claude:cinema': {
+    id: 'claude:cinema', label: 'ABET Cinema: Cinematic Dark / Light Glass (made by Claude)', engine: 'claude-worker',
+    contentTypes: ['reel', 'yt', 'explainer', 'ad', 'carousel'],
+    outputs: ['MP4 16:9, 9:16, 1:1, 4:5', 'PNG'],
+  },
   'claude:abet-motion': {
     id: 'claude:abet-motion', label: 'ABET Motion (made by Claude)', engine: 'claude-worker',
     contentTypes: ['reel', 'yt', 'explainer', 'pdf', 'carousel', 'ad'],
@@ -46,3 +51,7 @@ export function canGenerate(templateKind: string | null | undefined, serverRende
   if (!r) return false;
   return r.engine === 'claude-worker' || !!serverRenderers?.includes(r.id);
 }
+
+/** Static preview image for a style (execution_config.preview), used until an uploaded preview exists. */
+export const previewOf = (s: { execution_config?: Record<string, unknown> | null }): string | undefined =>
+  typeof s.execution_config?.preview === 'string' ? (s.execution_config.preview as string) : undefined;

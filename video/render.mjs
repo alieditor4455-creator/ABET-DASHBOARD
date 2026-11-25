@@ -32,10 +32,23 @@ const FPS = 30;
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 /** **word** in plan text becomes an accent highlight. */
 const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<em>$1</em>');
+/** Splits text into word spans (class "w") with staggered delays; **word** becomes a keyword span. */
+export function words(text, d0 = 0, step = 0.09, cls = 'w') {
+  let kw = false;
+  return String(text ?? '').split(/(\s+)/).map((tok) => {
+    if (/^\s+$/.test(tok) || !tok) return tok ? ' ' : '';
+    let t = tok; const open = t.startsWith('**'); if (open) { kw = true; t = t.slice(2); }
+    const close = /\*\*[.,!?;:]*$/.test(t); if (close) t = t.replace(/\*\*(?=[.,!?;:]*$)/, '');
+    const html = `<span class="${cls}${kw ? ' kw' : ''}" style="--d:${(d0 + step * (words.n = (words.n ?? 0) + 1) - step).toFixed(2)}s">${esc(t)}</span>`;
+    if (close) kw = false;
+    return html;
+  }).join('').replace(/^/, () => { words.n = 0; return ''; });
+}
 
 // ------------------------------------------------------------------ validation
 const SCENE_TYPES = ['title', 'points', 'stat', 'steps', 'compare', 'chart', 'statement', 'cta', 'image'];
-export function validatePlan(plan) {
+export function validatePlan(plan, extraTypes = []) {
+  const types = [...SCENE_TYPES, ...extraTypes];
   const errs = [];
   if (!plan || typeof plan !== 'object') return ['The plan must be a JSON object.'];
   if (!['video', 'slides', 'pdf'].includes(plan.output ?? 'video')) errs.push('output must be video, slides or pdf.');
@@ -43,7 +56,7 @@ export function validatePlan(plan) {
   if (!SIZES[aspect]) errs.push(`aspect must be one of ${Object.keys(SIZES).join(', ')}.`);
   if (!Array.isArray(plan.scenes) || !plan.scenes.length) errs.push('scenes must be a non-empty array.');
   (plan.scenes ?? []).forEach((s, i) => {
-    if (!SCENE_TYPES.includes(s.type)) errs.push(`scene ${i + 1}: type must be one of ${SCENE_TYPES.join(', ')}.`);
+    if (!types.includes(s.type)) errs.push(`scene ${i + 1}: type must be one of ${types.join(', ')}.`);
     if ((plan.output ?? 'video') === 'video' && !(s.duration > 0.5 && s.duration <= 30)) errs.push(`scene ${i + 1}: duration must be between 0.5 and 30 seconds.`);
     if (s.type === 'points' && !(Array.isArray(s.points) && s.points.length)) errs.push(`scene ${i + 1}: points needs a list.`);
     if (s.type === 'steps' && !(Array.isArray(s.steps) && s.steps.length)) errs.push(`scene ${i + 1}: steps needs a list.`);
@@ -121,7 +134,12 @@ function endCard(theme) {
     <p class="risk in" style="--d:.6s">${esc(RISK_SHORT)}</p><p class="reg in" style="--d:.7s">${esc(REG_LINE)}</p></div>`;
 }
 
-export function buildHtml(plan, planDir) {
+export async function loadTemplate(name = 'abet-motion') {
+  const modPath = path.join(HERE, 'templates', `${name}.mjs`);
+  return fs.existsSync(modPath) ? (await import(pathToFileURL(modPath).href)).default : null;
+}
+
+export async function buildHtml(plan, planDir) {
   const output = plan.output ?? 'video';
   const aspect = output === 'pdf' ? 'A4' : plan.aspect ?? '16:9';
   const [W, H] = SIZES[aspect];
@@ -137,21 +155,30 @@ export function buildHtml(plan, planDir) {
     const [fam, w] = f.split('-');
     return `@font-face{font-family:'${fam === 'SpaceGrotesk' ? 'Space Grotesk' : fam}';font-weight:${w};src:url('${pathToFileURL(path.join(HERE, 'fonts', f + '.woff2'))}') format('woff2')}`;
   }).join('\n');
-  const css = fs.readFileSync(path.join(HERE, 'templates', `${plan.template ?? 'abet-motion'}.css`), 'utf8');
+  const mod = await loadTemplate(plan.template);
+  const xf = output === 'video' ? mod?.xf ?? 0 : 0;
+  const file = (p) => pathToFileURL(path.join(ROOT, p)).href;
+  const ctx = { theme, aspect, W, H, land: W >= H, output, total, esc, rich, words, asset, file, chartSvg, RISK_SHORT, REG_LINE, plan };
+  const css = mod ? mod.css(ctx) : fs.readFileSync(path.join(HERE, 'templates', `${plan.template ?? 'abet-motion'}.css`), 'utf8');
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>${fontFace}\n${css}</style></head>
 <body class="theme-${theme} out-${output} ${W >= H ? 'land' : 'port'} a-${aspect.replace(':', 'x')}" style="width:${W}px;height:${H}px;--total:${total}s">
-<div class="bg"><div class="glow"></div></div>
+${mod ? mod.chrome(ctx) : `<div class="bg"><div class="glow"></div></div>`}
 ${plan.logo === false ? '' : `<img class="corner-logo" src="${pathToFileURL(path.join(ROOT, 'brand/logos', logo))}" alt="">`}
-${timed.map((s, i) => `<section class="scene t-${s.type}" data-s="${s.start}" data-e="${s.end}" data-cap="${esc(s.caption ?? '')}" style="--s:${s.start}s;--e:${s.end}s">${s.type === '__end' ? endCard(theme) : sceneBody(s, { asset })}${output === 'slides' && plan.scenes.length > 1 ? `<div class="slide-n">${i + 1} / ${timed.length}</div>${i === 0 ? '<div class="swipe">Swipe →</div>' : ''}` : ''}</section>`).join('\n')}
+${timed.map((s, i) => `<section class="scene t-${s.type}${s.accent ? ` ac-${s.accent}` : ''}" data-s="${s.start}" data-e="${s.end}" data-e2="${i < timed.length - 1 ? s.end + xf : s.end}" data-cap="${esc(s.caption ?? '')}" style="--s:${s.start}s;--e:${s.end}s;--dur:${s.end - s.start}s;--xf:${xf}s">${mod ? mod.scene(s, { ...ctx, index: i, count: timed.length }) : s.type === '__end' ? endCard(theme) : sceneBody(s, { asset })}${output === 'slides' && plan.scenes.length > 1 ? `<div class="slide-n">${i + 1} / ${timed.length}</div>${i === 0 ? '<div class="swipe">Swipe →</div>' : ''}` : ''}</section>`).join('\n')}
 ${output === 'video' && plan.captions !== false ? '<div class="caption" id="cap"></div>' : ''}
 ${plan.footer_risk ? `<div class="risk-footer">${esc(RISK_SHORT)}</div>` : ''}
 <div class="progress" style="--total:${total}s"></div>
 <script>
 const scenes=[...document.querySelectorAll('.scene')];const cap=document.getElementById('cap');
-const chunks=scenes.map(el=>{const w=(el.dataset.cap||'').split(/\\s+/).filter(Boolean);const out=[];for(let i=0;i<w.length;i+=7)out.push(w.slice(i,i+7).join(' '));return out});
-window.__seek=(t)=>{scenes.forEach((el,i)=>{const s=+el.dataset.s,e=+el.dataset.e;const on=t>=s&&t<e;el.style.display=on?'flex':'none';
- if(on&&cap){const c=chunks[i];if(!c.length){cap.style.opacity=0}else{const k=Math.min(c.length-1,Math.floor((t-s)/((e-s)/c.length)));cap.textContent=c[k];cap.style.opacity=1}}});
- const lg=document.querySelector('.corner-logo');if(lg){const last=scenes[scenes.length-1];lg.style.opacity=(last.classList.contains('t-__end')&&t>=+last.dataset.s)?0:1}
+// Captions: word by word ("karaoke"); **word** = keyword in the scene accent colour.
+const capWords=scenes.map(el=>{let kw=false;return (el.dataset.cap||'').split(/\\s+/).filter(Boolean).map(w=>{let o=w;const a=o.startsWith('**');if(a){kw=true;o=o.slice(2)}const b=/\\*\\*[.,!?;:]*$/.test(o);if(b)o=o.replace(/\\*\\*(?=[.,!?;:]*$)/,'');const r={w:o,kw};if(b)kw=false;return r})});
+const esc=(x)=>x.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const counters=[...document.querySelectorAll('[data-count]')];
+window.__seek=(t)=>{let cur=-1;scenes.forEach((el,i)=>{const s=+el.dataset.s,e=+el.dataset.e,e2=+el.dataset.e2;const on=t>=s&&t<e2;el.style.display=on?'flex':'none';if(t>=s&&t<e)cur=i;});
+ if(cap){const i=cur;const ws=i<0?[]:capWords[i];if(!ws.length){cap.style.opacity=0}else{const el=scenes[i];const s=+el.dataset.s+0.15,e=+el.dataset.e-0.25;const per=Math.max(0.12,(e-s)/ws.length);const k=Math.min(ws.length-1,Math.floor((t-s)/per));const L=7;const c0=Math.floor(Math.max(0,k)/L)*L;
+  cap.innerHTML=ws.slice(c0,c0+L).map((w,j)=>'<span class="cw'+(c0+j<=k?' on':'')+(w.kw?' kw':'')+'">'+esc(w.w)+'</span>').join(' ');cap.style.opacity=t<s-0.1?0:1;cap.className='caption'+(scenes[i].className.match(/ac-\\w+/)?' '+scenes[i].className.match(/ac-\\w+/)[0]:'');}}
+ counters.forEach(c=>{const a=+c.dataset.at,d=+c.dataset.dur,f=+c.dataset.from,to=+c.dataset.to,dec=+(c.dataset.dec||0);const p=Math.min(1,Math.max(0,(t-a)/d));const ez=1-Math.pow(1-p,3);c.textContent=(c.dataset.pre||'')+(f+(to-f)*ez).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec})+(c.dataset.suf||'')});
+ const lg=document.querySelector('.corner-logo');if(lg){const last=scenes[scenes.length-1];const first=scenes[0];lg.style.opacity=((last.classList.contains('t-__end')&&t>=+last.dataset.s)||(first.classList.contains('t-logo')&&t<+first.dataset.e))?0:1}
  document.getAnimations().forEach(a=>{a.pause();a.currentTime=t*1000});};
 window.__total=${total};window.__scenes=scenes.map(el=>[+el.dataset.s,+el.dataset.e]);
 </script></body></html>`;
@@ -160,9 +187,10 @@ window.__total=${total};window.__scenes=scenes.map(el=>[+el.dataset.s,+el.datase
 
 // ------------------------------------------------------------------ render
 export async function render(plan, out, { planDir = process.cwd(), preview = false, onProgress = () => {} } = {}) {
-  const errs = validatePlan(plan);
+  const mod = await loadTemplate(plan.template);
+  const errs = validatePlan(plan, mod?.types ?? []);
   if (errs.length) throw new Error('Plan problems:\n- ' + errs.join('\n- '));
-  const { html, W, H, total, output, scenes } = buildHtml(plan, planDir);
+  const { html, W, H, total, output, scenes } = await buildHtml(plan, planDir);
   const tmp = path.join(path.dirname(path.resolve(out)), `.render-${Date.now()}.html`);
   fs.writeFileSync(tmp, html);
   const browser = await chromium.launch();
@@ -193,9 +221,39 @@ export async function render(plan, out, { planDir = process.cwd(), preview = fal
       return { files };
     }
 
-    // Video: frame-accurate capture piped into ffmpeg.
+    // Video: frame-accurate capture, rendered in parallel segments (one Chromium page + one ffmpeg each),
+    // then joined without re-encoding and muxed with the audio.
     const frames = Math.round(total * FPS);
-    const args = ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-'];
+    // Keep the whole file under the 50 MB upload limit.
+    const kbps = Math.min(4000, Math.floor((44 * 8 * 1000) / total));
+    const rate = ['-maxrate', `${kbps}k`, '-bufsize', `${kbps * 2}k`];
+    const workers = Math.max(1, Math.min(Number(process.env.RENDER_WORKERS ?? 3), Math.ceil(frames / 150)));
+    const segDir = path.join(path.dirname(path.resolve(out)), `.segs-${Date.now()}`);
+    fs.mkdirSync(segDir, { recursive: true });
+    let doneFrames = 0, lastPct = -1;
+    const segs = await Promise.all(Array.from({ length: workers }, async (_, k) => {
+      const f0 = Math.floor((frames * k) / workers), f1 = Math.floor((frames * (k + 1)) / workers);
+      const pg = k === 0 ? page : await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+      if (k !== 0) { await pg.goto(pathToFileURL(tmp).href); await pg.evaluate(() => document.fonts.ready); }
+      const segFile = path.join(segDir, `seg${k}.mp4`);
+      const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-',
+        '-c:v', 'libx264', '-preset', 'medium', '-crf', '21', ...rate, '-pix_fmt', 'yuv420p', '-r', String(FPS), segFile], { stdio: ['pipe', 'inherit', 'inherit'] });
+      const done = new Promise((res, rej) => ff.on('close', (c) => (c === 0 ? res() : rej(new Error(`ffmpeg exited with ${c}`)))));
+      for (let f = f0; f < f1; f++) {
+        await pg.evaluate((x) => window.__seek(x), f / FPS);
+        const buf = await pg.screenshot({ type: 'jpeg', quality: 90 });
+        if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once('drain', r));
+        doneFrames++;
+        const pct = Math.floor((doneFrames / frames) * 100);
+        if (pct !== lastPct && pct % 5 === 0) { lastPct = pct; onProgress(pct); }
+      }
+      ff.stdin.end();
+      await done;
+      return segFile;
+    }));
+    const list = path.join(segDir, 'list.txt');
+    fs.writeFileSync(list, segs.map((f) => `file '${f}'`).join('\n'));
+    const args = ['-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list];
     const audio = plan.audio ?? {};
     const inputs = [];
     if (audio.voiceover) inputs.push(path.resolve(planDir, audio.voiceover));
@@ -205,17 +263,9 @@ export async function render(plan, out, { planDir = process.cwd(), preview = fal
     if (inputs.length === 2) args.push('-filter_complex', `[2:a]volume=0.18,afade=t=out:st=${Math.max(0, total - 2)}:d=2[m];[1:a][m]amix=inputs=2:duration=first:normalize=0[a]`, '-map', '0:v', '-map', '[a]');
     else if (inputs.length === 1 && audio.music) args.push('-af', `volume=0.35,afade=t=out:st=${Math.max(0, total - 2)}:d=2`, '-map', '0:v', '-map', '1:a');
     else args.push('-map', '0:v', '-map', '1:a');
-    const rate = total > 120 ? ['-maxrate', '1800k', '-bufsize', '3600k'] : ['-maxrate', '4M', '-bufsize', '8M'];
-    args.push('-c:v', 'libx264', '-preset', 'medium', '-crf', '21', ...rate, '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k', '-t', String(total), '-movflags', '+faststart', '-r', String(FPS), out);
-    const ff = spawn('ffmpeg', args, { stdio: ['pipe', 'inherit', 'inherit'] });
-    const done = new Promise((res, rej) => ff.on('close', (c) => (c === 0 ? res() : rej(new Error(`ffmpeg exited with ${c}`)))));
-    for (let f = 0; f < frames; f++) {
-      const buf = await shotAt(f / FPS);
-      if (!ff.stdin.write(buf)) await new Promise((r) => ff.stdin.once('drain', r));
-      if (f % FPS === 0) onProgress(Math.round((f / frames) * 100));
-    }
-    ff.stdin.end();
-    await done;
+    args.push('-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-t', String(total), '-movflags', '+faststart', out);
+    await new Promise((res, rej) => spawn('ffmpeg', args, { stdio: 'inherit' }).on('close', (c) => (c === 0 ? res() : rej(new Error(`ffmpeg join exited with ${c}`)))));
+    fs.rmSync(segDir, { recursive: true, force: true });
     return { file: out, seconds: total, frames };
   } finally {
     await browser.close();

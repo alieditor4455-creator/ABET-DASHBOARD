@@ -18,8 +18,8 @@ Claude writes one JSON plan per request; `node video/render.mjs plan.json <out>`
 |---|---|
 | `output` | `video` (MP4), `slides` (one PNG per scene), `pdf` (A4, one page per scene) |
 | `aspect` | `16:9`, `9:16`, `1:1`, `4:5` (ignored for `pdf`, always A4) |
-| `theme` | `light`, `dark`, `bold`: take it from the style's `execution_config.theme` |
-| `template` | `abet-motion` (the starter template; new reference styles add their own) |
+| `theme` | from the style's `execution_config.theme`: `dark` / `light` for `cinema`; `light` / `dark` / `bold` for `abet-motion` |
+| `template` | from the style's `execution_config.template`: `cinema` (Cinematic Dark / Light Glass) or `abet-motion` (carousels, PDFs) |
 | `captions` | on-screen captions from each scene's `caption` (video only), default `true` |
 | `end_card` | `false` to skip the automatic logo + risk-warning end card (only for single static ads) |
 | `footer_risk` | `true` puts the short risk warning on every slide (use for static ads) |
@@ -57,3 +57,23 @@ The end card (logo, abetglobal.com, @abet.global, risk warning, registration lin
 
 Headline ≤ 8 words · points ≤ 7 words each · step title ≤ 4 words, text ≤ 8 words · caption ≤ 25 words per scene.
 Render `--preview` first and look at every still: if text crowds or overflows, shorten it.
+
+## Cinema template (`"template": "cinema"`)
+
+The house look for videos, inspired by ABET's Forex Trading Academy film: ambient light, blur-to-focus motion, word-by-word headlines and captions, soft dissolves between scenes. Every scene can take `accent`: `red` (default), `green`, `blue`, `gold`, `white`; it colours highlighted words, captions keywords and cards. Use one accent per idea or chapter (e.g. levels in green, blue, red).
+
+It supports all the scene types above plus:
+
+| `type` | Fields | Notes |
+|---|---|---|
+| `logo` | `tagline` | Big glowing ABET logo. Use as the first scene (3 s). The end card is automatic. |
+| `statement` | `text` or `lines` [..], `sub`, `sequence: true` | With `sequence`, each line replaces the previous one ("Learn first." → "Practise **without risk.**" → "Trade with a **plan.**") |
+| `bigstat` | `kicker`, `value` or `count` {`from`, `to`, `prefix`, `suffix`, `decimals`}, `label`, `note`, optional `phone` | Huge glowing number; `count` animates it. Only real, sourced figures. |
+| `phone` | `kicker`, `headline`, `sub`, `phone` {`screen`: `watchlist` / `notifications` / `list`, `title`, `badge`, `balance`, `highlight` (row index), `rows` [{`sym`, `glyph`, `color`, `price`, `up`}], `items` [{`title`, `text`, `icon`, `color`, `done`}]} | 3D phone next to the text. Watchlist prices are placeholders like `1.08xx` and marked illustrative. |
+| `orbit` | `center` [lines], `orbs` [{`icon` or `text` (≤3 chars), `color`}] (4–10) | Glossy icon spheres orbiting a central message |
+| `card` | `number` or `icon`, `kicker`, `title`, `accent`, `progress` (0–1), `progress_label` [left, right], `bullets` [..], optional `chart` {`label`, `trend`} or `phone` {...} | Glowing glass card (levels, steps, features) with an optional chart panel or phone beside it |
+| `chat` | `messages` [{`from`: `user` / `coach`, `name`, `text`}] (2–4) | Chat between a learner and "ABET Coach" |
+
+Icons: `trend`, `shield`, `book`, `target`, `globe`, `bulb`, `candles`, `clock`, `user`, `chat`, `lock`, `check`, `wallet`, `layers`, `phone`, `star`, `play`, `graduation`, `calendar`, `bolt`.
+
+A good explainer rhythm: `logo` → hook `statement` → `phone` or `bigstat` → `orbit` (what's included) → 2–4 `card`s (steps/levels) → `chat` (common question) → `statement` with `sequence` → `cta`. Mark keywords with `**` in headlines and captions. See `examples/how-abet-works-cinema.json`.

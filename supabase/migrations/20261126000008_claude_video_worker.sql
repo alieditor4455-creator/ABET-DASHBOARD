@@ -126,7 +126,8 @@ revoke all on function public.video_queue(), public.claim_video_job(uuid, text),
 grant execute on function public.video_queue(), public.claim_video_job(uuid, text), public.video_job_progress(uuid, text, int, text),
   public.complete_video_job(uuid, jsonb, text), public.fail_video_job(uuid, text) to authenticated;
 
--- ---------------------------------------------------------------- starter styles (approved by the owner on 25 Nov 2026)
+-- ---------------------------------------------------------------- starter styles (approved by the owner on 25 Nov 2026;
+-- the two video looks are inspired by the owner's references: the ABET Forex Trading Academy film and a light glass promo)
 -- Approving needs an admin, except when run by the database owner (this setup script).
 create or replace function public.enforce_style_rules() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -141,32 +142,52 @@ begin
   return new;
 end $$;
 
+-- Retire the first plain video starters if an earlier copy of this update added them.
+update public.styles set active = false, archived = true
+ where template_kind = 'claude:abet-motion' and content_type in ('explainer', 'yt', 'reel', 'ad');
+
 insert into public.styles (name, category, content_type, description, motif, complexity, spec, is_custom, archived, status, active, template_kind, template_version, output_formats, required_assets, execution_config)
-select v.name, v.category::public.style_category, v.ct::public.content_type, v.descr, v.motif, 'Medium', v.spec::jsonb, true, false, 'approved', true, 'claude:abet-motion', 1, v.formats, '[]'::jsonb, v.cfg::jsonb
+select v.name, v.category::public.style_category, v.ct::public.content_type, v.descr, v.motif, 'Medium', v.spec::jsonb, true, false, 'approved', true, v.tk, 1, v.formats, '[]'::jsonb, v.cfg::jsonb
 from (values
-  ('ABET Clean Explainer', 'video', 'explainer', 'Starter style. Light, clean motion graphics: big headings, step cards, charts and captions in ABET red and ink.', 'mg',
-   '[["Look","Light canvas, ink text, ABET red accents"],["Motion","Smooth rise and fade, one idea per scene"],["Captions","On-screen captions from the script"],["End card","Logo, website and risk warning"]]',
-   array['16:9 MP4','9:16 MP4','1:1 MP4'],
-   '{"engine":"claude","template":"abet-motion","theme":"light","outputs":["video"],"aspects":["16:9","9:16","1:1"],"lengths":["30 seconds","60–90 seconds","2–3 minutes"]}'),
-  ('ABET Clean Chapters', 'video', 'yt', 'Starter style. Light chaptered explainer for YouTube: chapter titles, step cards, charts and captions.', 'chart',
-   '[["Look","Light canvas, ink text, ABET red accents"],["Structure","Intro, 3–6 chapters, recap, call to action"],["Captions","On-screen captions from the script"]]',
-   array['16:9 MP4'],
-   '{"engine":"claude","template":"abet-motion","theme":"light","outputs":["video"],"aspects":["16:9"],"lengths":["2–3 minutes","3–5 minutes"]}'),
-  ('ABET Bold Kinetic', 'video', 'reel', 'Starter style. Bold ABET-red reels with big kinetic type and fast scenes for Reels, Shorts and TikTok.', 'typeled',
-   '[["Look","ABET red background, white type, ink cards"],["Pacing","Fast: 2–4 seconds per scene"],["Captions","Large captions for watching on mute"]]',
-   array['9:16 MP4','1:1 MP4','4:5 MP4'],
-   '{"engine":"claude","template":"abet-motion","theme":"bold","outputs":["video"],"aspects":["9:16","1:1","4:5"],"lengths":["15 seconds","30 seconds","45–60 seconds"]}'),
-  ('ABET Premium Dark Ad', 'ad', 'ad', 'Starter style. Dark premium ads with a red glow, a clear offer and a strong call to action. Video or static.', 'ad',
-   '[["Look","Near-black canvas, red glow, white type"],["Structure","Hook, benefit, proof, call to action"],["Compliance","Risk warning on every ad"]]',
-   array['9:16 MP4','1:1 MP4','16:9 MP4','4:5 MP4','1:1 PNG','4:5 PNG'],
-   '{"engine":"claude","template":"abet-motion","theme":"dark","outputs":["video","image"],"aspects":["9:16","1:1","4:5","16:9"],"lengths":["6 seconds","15 seconds","30 seconds"]}'),
+  ('Cinematic Dark Explainer', 'video', 'explainer', 'Dark, cinematic UI motion inspired by the ABET Forex Trading Academy film. Phone screens, glass cards, orbiting icons and word-by-word captions.', 'cine',
+   '[["Look","Near-black canvas with slow red, teal and blue light"],["Motion","Blur-to-focus entrances, word-by-word headlines, soft dissolves between scenes, slow camera push"],["Elements","3D phone with app screens, glowing glass cards, orbiting icon spheres, chat bubbles, illustrative charts"],["Captions","Word-by-word captions with keywords in colour"],["End card","Logo, website and risk warning"]]',
+   array['16:9 MP4', '9:16 MP4', '1:1 MP4'], 'claude:cinema',
+   '{"engine": "claude", "template": "cinema", "theme": "dark", "preview": "/style-previews/cinematic-dark.jpg", "outputs": ["video"], "aspects": ["16:9", "9:16", "1:1"], "lengths": ["30 seconds", "60–90 seconds", "2–3 minutes"]}'),
+  ('Cinematic Dark Long Form', 'video', 'yt', 'Dark, cinematic UI motion inspired by the ABET Forex Trading Academy film, paced for YouTube with chapter titles.', 'cine',
+   '[["Look","Near-black canvas with slow red, teal and blue light"],["Motion","Blur-to-focus entrances, word-by-word headlines, soft dissolves between scenes, slow camera push"],["Elements","3D phone with app screens, glowing glass cards, orbiting icon spheres, chat bubbles, illustrative charts"],["Captions","Word-by-word captions with keywords in colour"],["End card","Logo, website and risk warning"]]',
+   array['16:9 MP4'], 'claude:cinema',
+   '{"engine": "claude", "template": "cinema", "theme": "dark", "preview": "/style-previews/cinematic-dark.jpg", "outputs": ["video"], "aspects": ["16:9"], "lengths": ["2–3 minutes", "3–5 minutes"]}'),
+  ('Cinematic Dark Reel', 'video', 'reel', 'Dark, cinematic UI motion inspired by the ABET Forex Trading Academy film, fast vertical pacing for Reels, Shorts and TikTok.', 'cine',
+   '[["Look","Near-black canvas with slow red, teal and blue light"],["Motion","Blur-to-focus entrances, word-by-word headlines, soft dissolves between scenes, slow camera push"],["Elements","3D phone with app screens, glowing glass cards, orbiting icon spheres, chat bubbles, illustrative charts"],["Captions","Word-by-word captions with keywords in colour"],["End card","Logo, website and risk warning"]]',
+   array['9:16 MP4', '1:1 MP4', '4:5 MP4'], 'claude:cinema',
+   '{"engine": "claude", "template": "cinema", "theme": "dark", "preview": "/style-previews/cinematic-dark.jpg", "outputs": ["video"], "aspects": ["9:16", "1:1", "4:5"], "lengths": ["15 seconds", "30 seconds", "45–60 seconds"]}'),
+  ('Cinematic Dark Ad', 'ad', 'ad', 'Dark, cinematic UI motion inspired by the ABET Forex Trading Academy film: hook, benefit, call to action. Video or static.', 'ad',
+   '[["Look","Near-black canvas with slow red, teal and blue light"],["Motion","Blur-to-focus entrances, word-by-word headlines, soft dissolves between scenes, slow camera push"],["Elements","3D phone with app screens, glowing glass cards, orbiting icon spheres, chat bubbles, illustrative charts"],["Captions","Word-by-word captions with keywords in colour"],["End card","Logo, website and risk warning"]]',
+   array['9:16 MP4', '1:1 MP4', '4:5 MP4', '16:9 MP4', '1:1 PNG', '4:5 PNG'], 'claude:cinema',
+   '{"engine": "claude", "template": "cinema", "theme": "dark", "preview": "/style-previews/cinematic-dark.jpg", "outputs": ["video", "image"], "aspects": ["9:16", "1:1", "4:5", "16:9"], "lengths": ["6 seconds", "15 seconds", "30 seconds"]}'),
+  ('Light Glass Explainer', 'video', 'explainer', 'Light, airy glass UI motion in ABET white and red. Phone screens, glass cards, orbiting icons and word-by-word captions.', 'mg',
+   '[["Look","Soft white canvas with warm ABET-red light, frosted glass panels"],["Motion","Blur-to-focus entrances, word-by-word headlines, soft dissolves, slow camera push"],["Elements","3D phone, glass cards, orbiting icon spheres, chat bubbles, illustrative charts"],["Captions","Word-by-word captions with keywords in colour"],["End card","Logo, website and risk warning"]]',
+   array['16:9 MP4', '9:16 MP4', '1:1 MP4'], 'claude:cinema',
+   '{"engine": "claude", "template": "cinema", "theme": "light", "preview": "/style-previews/light-glass.jpg", "outputs": ["video"], "aspects": ["16:9", "9:16", "1:1"], "lengths": ["30 seconds", "60–90 seconds", "2–3 minutes"]}'),
+  ('Light Glass Long Form', 'video', 'yt', 'Light, airy glass UI motion in ABET white and red, paced for YouTube with chapter titles.', 'mg',
+   '[["Look","Soft white canvas with warm ABET-red light, frosted glass panels"],["Motion","Blur-to-focus entrances, word-by-word headlines, soft dissolves, slow camera push"],["Elements","3D phone, glass cards, orbiting icon spheres, chat bubbles, illustrative charts"],["Captions","Word-by-word captions with keywords in colour"],["End card","Logo, website and risk warning"]]',
+   array['16:9 MP4'], 'claude:cinema',
+   '{"engine": "claude", "template": "cinema", "theme": "light", "preview": "/style-previews/light-glass.jpg", "outputs": ["video"], "aspects": ["16:9"], "lengths": ["2–3 minutes", "3–5 minutes"]}'),
+  ('Light Glass Reel', 'video', 'reel', 'Light, airy glass UI motion in ABET white and red, fast vertical pacing for Reels, Shorts and TikTok.', 'mg',
+   '[["Look","Soft white canvas with warm ABET-red light, frosted glass panels"],["Motion","Blur-to-focus entrances, word-by-word headlines, soft dissolves, slow camera push"],["Elements","3D phone, glass cards, orbiting icon spheres, chat bubbles, illustrative charts"],["Captions","Word-by-word captions with keywords in colour"],["End card","Logo, website and risk warning"]]',
+   array['9:16 MP4', '1:1 MP4', '4:5 MP4'], 'claude:cinema',
+   '{"engine": "claude", "template": "cinema", "theme": "light", "preview": "/style-previews/light-glass.jpg", "outputs": ["video"], "aspects": ["9:16", "1:1", "4:5"], "lengths": ["15 seconds", "30 seconds", "45–60 seconds"]}'),
+  ('Light Glass Ad', 'ad', 'ad', 'Light, airy glass UI motion in ABET white and red: hook, benefit, call to action. Video or static.', 'ad',
+   '[["Look","Soft white canvas with warm ABET-red light, frosted glass panels"],["Motion","Blur-to-focus entrances, word-by-word headlines, soft dissolves, slow camera push"],["Elements","3D phone, glass cards, orbiting icon spheres, chat bubbles, illustrative charts"],["Captions","Word-by-word captions with keywords in colour"],["End card","Logo, website and risk warning"]]',
+   array['9:16 MP4', '1:1 MP4', '4:5 MP4', '16:9 MP4', '1:1 PNG', '4:5 PNG'], 'claude:cinema',
+   '{"engine": "claude", "template": "cinema", "theme": "light", "preview": "/style-previews/light-glass.jpg", "outputs": ["video", "image"], "aspects": ["9:16", "1:1", "4:5", "16:9"], "lengths": ["6 seconds", "15 seconds", "30 seconds"]}'),
   ('ABET Clean Carousel', 'graphic', 'carousel', 'Starter style. Light step-by-step carousel slides with numbered cards and a swipe cue.', 'carousel',
    '[["Look","Light canvas, ink text, ABET red accents"],["Structure","Cover, one idea per slide, call to action, risk slide"]]',
-   array['4:5 PNG slides','1:1 PNG slides'],
-   '{"engine":"claude","template":"abet-motion","theme":"light","outputs":["slides"],"aspects":["4:5","1:1"],"lengths":["5 slides","7 slides","10 slides"]}'),
+   array['4:5 PNG slides', '1:1 PNG slides'], 'claude:abet-motion',
+   '{"engine": "claude", "template": "abet-motion", "theme": "light", "preview": "/style-previews/clean-carousel.jpg", "outputs": ["slides"], "aspects": ["4:5", "1:1"], "lengths": ["5 slides", "7 slides", "10 slides"]}'),
   ('ABET Clean Guide', 'pdf', 'pdf', 'Starter style. Light A4 guide: cover, clear sections, key numbers, steps and a closing page with the risk warning.', 'pdfdoc',
    '[["Look","Light A4 pages, ink text, ABET red accents"],["Structure","Cover, sections, checklist, closing page"]]',
-   array['A4 PDF'],
-   '{"engine":"claude","template":"abet-motion","theme":"light","outputs":["pdf"],"aspects":["A4"],"lengths":["4 pages","8 pages","12 pages"]}')
-) as v(name, category, ct, descr, motif, spec, formats, cfg)
-where not exists (select 1 from public.styles s where s.name = v.name);
+   array['A4 PDF'], 'claude:abet-motion',
+   '{"engine": "claude", "template": "abet-motion", "theme": "light", "preview": "/style-previews/clean-guide.jpg", "outputs": ["pdf"], "aspects": ["A4"], "lengths": ["4 pages", "8 pages", "12 pages"]}')
+) as v(name, category, ct, descr, motif, spec, formats, tk, cfg)
+where not exists (select 1 from public.styles s where s.name = v.name and s.category = v.category::public.style_category);

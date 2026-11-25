@@ -12,11 +12,11 @@ end $$;
 create or replace function pg_temp.u(id text) returns void language plpgsql as $$
 begin perform set_config('request.jwt.claim.sub', id, false); perform set_config('request.jwt.claims', json_build_object('sub', id, 'aal', 'aal2')::text, false); execute 'set role authenticated'; end $$;
 
-select pg_temp.c5('six starter styles approved and active', $q$ do $d$ begin if (select count(*) from public.styles where template_kind='claude:abet-motion' and status='approved' and active) <> 6 then raise exception 'count'; end if; end $d$ $q$, false);
+select pg_temp.c5('ten starter styles approved and active', $q$ do $d$ begin if (select count(*) from public.styles where template_kind like 'claude:%' and status='approved' and active) <> 10 then raise exception 'count %', (select count(*) from public.styles where template_kind like 'claude:%' and status='approved' and active); end if; end $d$ $q$, false);
 insert into public.content_items (id,title,topic,type,owner_id,created_by,status) values ('20000000-0000-0000-0000-000000000009','How ABET works','How ABET works','explainer','00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000002','draft');
 
 select pg_temp.u('00000000-0000-0000-0000-000000000002');
-select pg_temp.c5('writer requests a video', $q$ insert into public.production_jobs (id,item_id,style_id,created_by,kind,status,request) values ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000009',(select id from public.styles where name='ABET Clean Explainer'),'00000000-0000-0000-0000-000000000002','video','waiting_for_claude','{"output":"video","aspect":"16:9","length":"30 seconds"}') $q$, false);
+select pg_temp.c5('writer requests a video', $q$ insert into public.production_jobs (id,item_id,style_id,created_by,kind,status,request) values ('50000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000009',(select id from public.styles where name='Cinematic Dark Explainer'),'00000000-0000-0000-0000-000000000002','video','waiting_for_claude','{"output":"video","aspect":"16:9","length":"30 seconds"}') $q$, false);
 select pg_temp.c5('writer sees the video queue', $q$ do $d$ begin if jsonb_array_length(public.video_queue()) <> 1 then raise exception 'len'; end if; end $d$ $q$, false);
 reset role;
 
@@ -26,7 +26,7 @@ select pg_temp.c5('role without create cannot claim', $q$ select public.claim_vi
 reset role;
 
 select pg_temp.u('00000000-0000-0000-0000-000000000001');
-select pg_temp.c5('worker claims job with brief', $q$ do $d$ declare b jsonb; begin b := public.claim_video_job('50000000-0000-0000-0000-000000000001','Claude Code'); if b->'style'->>'name' <> 'ABET Clean Explainer' or b->'request'->>'aspect' <> '16:9' then raise exception 'brief %', b; end if; end $d$ $q$, false);
+select pg_temp.c5('worker claims job with brief', $q$ do $d$ declare b jsonb; begin b := public.claim_video_job('50000000-0000-0000-0000-000000000001','Claude Code'); if b->'style'->>'name' <> 'Cinematic Dark Explainer' or b->'request'->>'aspect' <> '16:9' then raise exception 'brief %', b; end if; end $d$ $q$, false);
 select pg_temp.c5('second claim fails', $q$ select public.claim_video_job('50000000-0000-0000-0000-000000000001','Other') $q$, true);
 select pg_temp.c5('claimer reports progress', $q$ select public.video_job_progress('50000000-0000-0000-0000-000000000001','Rendering',60,'Script saved') $q$, false);
 select pg_temp.c5('complete fails before upload', $q$ select public.complete_video_job('50000000-0000-0000-0000-000000000001','[{"path":"jobs/50000000-0000-0000-0000-000000000001/v.mp4","name":"v.mp4","kind":"Video"}]') $q$, true);

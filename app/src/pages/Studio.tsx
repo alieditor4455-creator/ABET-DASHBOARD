@@ -4,7 +4,7 @@ import { Icon } from '../components/Icon';
 import { Avatar, Chip, CopyButton, Empty, Notice, Panel, StatusChip, Thumb } from '../components/ui';
 import { Comments } from '../components/Account';
 import { PLAT, PLAT_KEYS, PLAT_LIMIT, ROLE_LABEL, TOPIC_SUGGESTIONS, TYPES, TYPE_KEYS } from '../lib/constants';
-import { canGenerate, rendererFor, workerConfig } from '../lib/renderers';
+import { canGenerate, previewOf, rendererFor, workerConfig } from '../lib/renderers';
 import { claudePrompt, complianceCheck, makeCaption, templateScript } from '../lib/script';
 import { ago, fmtBytes, fmtDateTime, isPast, toLocalInput } from '../lib/format';
 import { linkProps, navigate } from '../lib/router';
@@ -79,7 +79,7 @@ export function useCapabilities() {
   return caps;
 }
 
-export function StylePreview({ assetId, motif }: { assetId: string | null; motif?: string }) {
+export function StylePreview({ assetId, motif, src }: { assetId: string | null; motif?: string; src?: string }) {
   const { api } = useStore();
   const [url, setUrl] = useState<{ u: string; video: boolean } | null>(null);
   useEffect(() => {
@@ -93,6 +93,7 @@ export function StylePreview({ assetId, motif }: { assetId: string | null; motif
     });
     return () => { on = false; };
   }, [api, assetId]);
+  if (!url && src) return <span className="thumb" style={{ display: 'block' }}><img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></span>;
   if (url) return <span className="thumb" style={{ display: 'block' }}>{url.video ? <video src={url.u} muted loop autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <img src={url.u} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}</span>;
   return <Thumb motif={motif || 'mini'} />;
 }
@@ -156,7 +157,7 @@ function NewTopic({ type }: { type: ContentType }) {
                   const ok = canGenerate(s.template_kind, caps?.renderers);
                   return (
                     <button key={s.id} className={`sty${s.id === styleId ? ' sel' : ''}`} aria-pressed={s.id === styleId} onClick={() => setStyleId(s.id === styleId ? null : s.id)}>
-                      <StylePreview assetId={s.preview_asset_id} motif={s.motif} />
+                      <StylePreview assetId={s.preview_asset_id} motif={s.motif} src={previewOf(s)} />
                       <span className="sel-mark" style={{ position: 'absolute', top: 10, left: 10 }}><Icon name="check" /></span>
                       <span className="sty-b"><b>{s.name}</b><p>{s.description}</p>{!ok && <span className="muted" style={{ fontSize: 11.5 }}>Production template not built yet</span>}</span>
                     </button>
@@ -432,7 +433,7 @@ function StyleStep({ item, onNext, onBack }: { item: ContentItem; onNext: () => 
         <div className="gallery">
           {list.map((s) => (
             <button key={s.id} className={`sty${s.id === sel ? ' sel' : ''}`} aria-pressed={s.id === sel} onClick={() => setSel(s.id)}>
-              <StylePreview assetId={s.preview_asset_id} motif={s.motif} />
+              <StylePreview assetId={s.preview_asset_id} motif={s.motif} src={previewOf(s)} />
               <span className="sel-mark" style={{ position: 'absolute', top: 10, left: 10 }}><Icon name="check" /></span>
               <span className="sty-b"><b>{s.name}</b><p>{s.description}</p></span>
             </button>

@@ -3,7 +3,7 @@ import { useStore } from '../data/store';
 import { Icon } from '../components/Icon';
 import { Chip, Drawer, Empty, Notice } from '../components/ui';
 import { STYLE_STATUS, TYPES, TYPE_KEYS } from '../lib/constants';
-import { RENDERERS, canGenerate } from '../lib/renderers';
+import { RENDERERS, canGenerate, previewOf } from '../lib/renderers';
 import { navigate } from '../lib/router';
 import { fmtBytes } from '../lib/format';
 import { StylePreview, useCapabilities } from './Studio';
@@ -50,7 +50,7 @@ export function Styles({ params }: { params: URLSearchParams }) {
             const built = canGenerate(s.template_kind, caps?.renderers);
             return (
               <button key={s.id} className="sty" onClick={() => setOpen(s)}>
-                <StylePreview assetId={s.preview_asset_id} motif={s.motif} />
+                <StylePreview assetId={s.preview_asset_id} motif={s.motif} src={previewOf(s)} />
                 <span className="sty-b"><b>{s.name}</b><p>{s.description || 'No description yet'}</p>
                   {manage && <span className="sc-meta" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                     <Chip cls={STYLE_STATUS[s.status].cls}>{STYLE_STATUS[s.status].label}</Chip>
@@ -109,7 +109,7 @@ function StyleEditor({ style, onClose, onSaved }: { style: Style; onClose: () =>
 
   if (!manage) return (
     <Drawer title={style.name} onClose={onClose}>
-      <StylePreview assetId={style.preview_asset_id} motif={style.motif} />
+      <StylePreview assetId={style.preview_asset_id} motif={style.motif} src={previewOf(style)} />
       <p style={{ color: 'var(--text-2)' }}>{style.description}</p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Chip>{TYPES[type].name}</Chip>{style.output_formats.map((f) => <Chip key={f}>{f}</Chip>)}</div>
       <button className="btn primary" style={{ alignSelf: 'flex-start' }} onClick={() => navigate(`/studio?type=${type}`)}><Icon name="wand" />Create with this style</button>
@@ -144,7 +144,7 @@ function StyleEditor({ style, onClose, onSaved }: { style: Style; onClose: () =>
 
       <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <h3>Preview</h3>
-        <StylePreview assetId={d.preview_asset_id} motif={d.motif} />
+        <StylePreview assetId={d.preview_asset_id} motif={d.motif} src={previewOf(d)} />
         <label className="btn sm" style={{ alignSelf: 'flex-start' }}><Icon name="upload" size={16} />{d.preview_asset_id ? 'Replace preview' : 'Upload preview'}<input type="file" hidden accept="video/*,image/*" onChange={(e) => upload(e.target.files, 'preview')} /></label>
       </section>
 

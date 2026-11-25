@@ -19,12 +19,13 @@ Process requests oldest first, at most **3 per run** (the rest wait for the next
 2. **Read the brand kit once per run:** `get_brand_kit`. Follow its voice, compliance rules and legal lines.
 3. **Write the script** for the topic, format, audience, objective and `item.note`, in the style's spirit (`style.description`, `style.spec`). Save it with `save_script` (sections = scenes/slides/pages, `voiceover` = the caption text). Then `report_video_progress` stage "Designing the scenes", progress 35.
 4. **Write the scene plan** as JSON in a fresh temp folder (e.g. `/tmp/abet-<job_id>/plan.json`), following `video/PLAN.md`:
-   - `template` = `style.execution_config.template` (default `abet-motion`), `theme` = `style.execution_config.theme`.
+   - `template` = `style.execution_config.template` (`cinema` for videos and ads, `abet-motion` for carousels and PDFs), `theme` = `style.execution_config.theme`.
+   - For `cinema`, follow the rhythm and scene types in `video/PLAN.md` (logo → hook → phone/bigstat → orbit → cards → chat → sequence statement → cta), with `accent` colours per idea and `**keywords**` in headlines and captions. Write a `caption` for every scene: it's what the viewer reads.
    - `request.output`: `video` → `"output": "video"`; `slides` → `"output": "slides"`; `pdf` → `"output": "pdf"`; `image` (static ad) → `"output": "slides"`, one scene, `"end_card": false`, `"footer_risk": true`.
    - `aspect` = `request.aspect`. Fit the total duration (video) or count (slides/pages) to `request.length`, including the 4-second end card.
 5. **Preview:** `node video/render.mjs plan.json /tmp/abet-<job_id>/preview --preview`, then look at every PNG. Fix crowded or overflowing text by shortening it, and re-preview until every frame is clean.
 6. **Render:** `report_video_progress` stage "Rendering", progress 60, then:
-   - video: `node video/render.mjs plan.json /tmp/abet-<job_id>/<slug>-<aspect>.mp4` (about 2 s of render per second of video)
+   - video: `node video/render.mjs plan.json /tmp/abet-<job_id>/<slug>-<aspect>.mp4` (about 2 s of render per second of video; renders in parallel)
    - slides/image: `node video/render.mjs plan.json /tmp/abet-<job_id>/slides`
    - pdf: `node video/render.mjs plan.json /tmp/abet-<job_id>/<slug>.pdf`
    For a video, check 3–4 frames with ffmpeg (`ffmpeg -ss <t> -i file.mp4 -frames:v 1 f.png`) before uploading.

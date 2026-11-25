@@ -1,0 +1,20 @@
+{
+  "title": "How ABET Global works",
+  "template": "cinema",
+  "output": "video",
+  "aspect": "16:9",
+  "theme": "dark",
+  "captions": true,
+  "scenes": [
+    { "type": "logo", "duration": 3.2, "tagline": "Learn · Practise · Trade with a plan" },
+    { "type": "statement", "duration": 4, "text": "Markets move **every day.**", "sub": "Here is how ABET Global helps you take part, step by step.", "caption": "Markets move **every day.** Here is how ABET Global works." },
+    { "type": "phone", "duration": 5.5, "kicker": "ABET Global", "headline": "Everything in **one place.**", "sub": "Forex, gold and more on MetaTrader 5.", "phone": { "screen": "watchlist", "highlight": 3 }, "caption": "Trade forex, gold and more on **MetaTrader 5**, from one account." },
+    { "type": "orbit", "duration": 5.5, "accent": "blue", "center": ["One account.", "**Many markets.**"], "orbs": [{ "text": "€", "color": "blue" }, { "icon": "candles", "color": "green" }, { "text": "£", "color": "blue" }, { "text": "Au", "color": "gold" }, { "icon": "globe", "color": "blue" }, { "text": "¥", "color": "red" }, { "icon": "trend", "color": "green" }, { "icon": "shield", "color": "red" }], "caption": "One account gives you access to **many markets.**" },
+    { "type": "card", "duration": 6, "accent": "green", "number": 1, "kicker": "Step 1 of 3", "title": "Open your account", "progress": 0.33, "progress_label": ["Step 1", "of 3"], "bullets": ["Sign up on abetglobal.com", "Verify your identity", "Choose demo or live"], "chart": { "label": "EUR/USD · ILLUSTRATIVE", "trend": "up" }, "caption": "Step one: sign up on our website, verify your identity, and **choose demo or live.**" },
+    { "type": "card", "duration": 5.5, "accent": "blue", "number": 2, "kicker": "Step 2 of 3", "title": "Practise on demo", "progress": 0.66, "progress_label": ["Step 2", "of 3"], "bullets": ["Virtual funds, real platform", "Test your strategy first"], "phone": { "screen": "watchlist", "highlight": 0 }, "caption": "Step two: **practise on a demo account** with virtual funds before you risk real money." },
+    { "type": "chat", "duration": 6, "accent": "red", "messages": [{ "from": "user", "name": "New trader", "text": "I'm new. Where should I start?" }, { "from": "coach", "name": "ABET Coach", "text": "Open a free **demo account**, learn the basics, then trade with a plan." }], "caption": "New to trading? Start with a **demo account** and learn the basics first." },
+    { "type": "bigstat", "duration": 4.5, "accent": "red", "kicker": "The forex market", "value": "24/5", "label": "Open 24 hours a day, five days a week.", "caption": "The forex market is open **24 hours a day,** five days a week." },
+    { "type": "statement", "duration": 5.4, "accent": "green", "sequence": true, "lines": ["Learn first.", "Practise **without risk.**", "Trade with a **plan.**"], "caption": "Learn first. Practise **without risk.** Then trade with a plan." },
+    { "type": "cta", "duration": 4.5, "headline": "Open your **free demo account**", "action": "Get started", "url": "abetglobal.com", "caption": "Open your **free demo account** today at abetglobal.com." }
+  ]
+}
