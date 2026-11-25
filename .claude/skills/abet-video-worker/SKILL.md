@@ -17,7 +17,7 @@ Process requests oldest first, at most **3 per run** (the rest wait for the next
 
 1. **Claim it:** `claim_video_job` with `job_id` and `worker: "Claude Code (scheduled)"` (or "Claude Code" when a person started you). If the claim fails, someone else took it: skip it.
 2. **Read the brand kit once per run:** `get_brand_kit`. Follow its voice, compliance rules and legal lines.
-3. **Write the script** for the topic, format, audience, objective and `item.note`, in the style's spirit (`style.description`, `style.spec`). Save it with `save_script` (sections = scenes/slides/pages, `voiceover` = the caption text). Then `report_video_progress` stage "Designing the scenes", progress 35.
+3. **Write the script** for the topic, format, audience, objective and `item.note`, in the style's spirit (`style.description`, `style.spec`). Save it with `save_script` (sections = scenes/slides/pages, `voiceover` = the caption text). The last section must be the end card with the risk warning in `on_screen` ("CFDs are complex instruments traded on leverage and carry a high risk of losing money. Only trade with money you can afford to lose."), or the compliance check fails; fix any failed check and save again. Then `report_video_progress` stage "Designing the scenes", progress 35.
 4. **Write the scene plan** as JSON in a fresh temp folder (e.g. `/tmp/abet-<job_id>/plan.json`), following `video/PLAN.md`:
    - `template` = `style.execution_config.template` (`cinema` for videos and ads, `abet-motion` for carousels and PDFs), `theme` = `style.execution_config.theme`.
    - If the style has `execution_config.tokens`, copy them into the plan as `"tokens"` (that's the style's look).
