@@ -17,7 +17,7 @@ export default async (req: Request) => {
   const { data: u, error: ue } = await db.auth.getUser(token);
   if (ue || !u.user) return json({ error: 'Your session expired. Sign in again.' }, 401);
 
-  let body: { itemId?: string; mode?: string; request?: { output?: string; aspect?: string; length?: string } };
+  let body: { itemId?: string; mode?: string; request?: { output?: string; aspect?: string; length?: string; reference_ids?: unknown } };
   try { body = await req.json(); } catch { return json({ error: 'Bad request' }, 400); }
   const mode = body.mode === 'full' ? 'full' : body.mode === 'video' ? 'video' : 'script';
   const { data: item } = await db.from('content_items').select('id,title,style_id,request_note').eq('id', body.itemId ?? '').maybeSingle();
@@ -36,7 +36,8 @@ export default async (req: Request) => {
     const cfg = (style.execution_config ?? {}) as { outputs?: string[]; aspects?: string[]; lengths?: string[] };
     const r = body.request ?? {};
     const pick = (v: string | undefined, list: string[] | undefined, d: string) => (v && (!list?.length || list.includes(v)) ? v : list?.[0] ?? d);
-    const request = { output: pick(r.output, cfg.outputs, 'video'), aspect: pick(r.aspect, cfg.aspects, '16:9'), length: pick(r.length, cfg.lengths, '60–90 seconds') };
+    const refIds = Array.isArray(r.reference_ids) ? r.reference_ids.filter((x): x is string => typeof x === 'string' && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 3) : [];
+    const request = { output: pick(r.output, cfg.outputs, 'video'), aspect: pick(r.aspect, cfg.aspects, '16:9'), length: pick(r.length, cfg.lengths, '60–90 seconds'), ...(refIds.length ? { reference_ids: refIds } : {}) };
     const { data: open } = await db.from('production_jobs').select('id').eq('item_id', item.id).eq('kind', 'video').in('status', ['waiting_for_claude', 'running']).limit(1);
     if (open?.length) return json({ error: 'Claude is already working on this item.' }, 409);
     const { data: job, error: je } = await db.from('production_jobs').insert({

@@ -1,6 +1,6 @@
 ---
 name: abet-video-worker
-description: Make the videos, carousels, PDFs and ads waiting in the ABET Content OS video queue. Use when asked to "make the queued videos", "process the ABET video queue", or when a scheduled run starts. Needs the ABET Content OS connector and this repository.
+description: Make the videos, carousels, PDFs and ads waiting in the ABET Content OS video queue, and build new styles admins requested from the team's references. Use when asked to "make the queued videos", "process the ABET video queue", or when a scheduled run starts. Needs the ABET Content OS connector and this repository.
 ---
 
 # ABET video worker
@@ -20,6 +20,8 @@ Process requests oldest first, at most **3 per run** (the rest wait for the next
 3. **Write the script** for the topic, format, audience, objective and `item.note`, in the style's spirit (`style.description`, `style.spec`). Save it with `save_script` (sections = scenes/slides/pages, `voiceover` = the caption text). Then `report_video_progress` stage "Designing the scenes", progress 35.
 4. **Write the scene plan** as JSON in a fresh temp folder (e.g. `/tmp/abet-<job_id>/plan.json`), following `video/PLAN.md`:
    - `template` = `style.execution_config.template` (`cinema` for videos and ads, `abet-motion` for carousels and PDFs), `theme` = `style.execution_config.theme`.
+   - If the style has `execution_config.tokens`, copy them into the plan as `"tokens"` (that's the style's look).
+   - **References:** if the brief has `references` (the requester said "make it like this") or `style.references`, call `get_reference_files`, download them and look at them (images directly; videos: `ffmpeg -i ref.mp4 -vf fps=1/2,scale=640:-1 f%02d.png` and view the frames). Borrow layout, pacing, scene ideas and type treatment; never copy their logos, people, text or brand, and stay within ABET's brand and the style's colours.
    - For `cinema`, follow the rhythm and scene types in `video/PLAN.md` (logo → hook → phone/bigstat → orbit → cards → chat → sequence statement → cta), with `accent` colours per idea and `**keywords**` in headlines and captions. Write a `caption` for every scene: it's what the viewer reads.
    - `request.output`: `video` → `"output": "video"`; `slides` → `"output": "slides"`; `pdf` → `"output": "pdf"`; `image` (static ad) → `"output": "slides"`, one scene, `"end_card": false`, `"footer_risk": true`.
    - `aspect` = `request.aspect`. Fit the total duration (video) or count (slides/pages) to `request.length`, including the 4-second end card.
@@ -34,6 +36,16 @@ Process requests oldest first, at most **3 per run** (the rest wait for the next
 
 If anything blocks you (missing facts, render error you can't fix, upload failure after 2 retries), call `fail_video_job` with a plain-language reason and what the requester can do, then continue with the next request.
 
+## 3. Style requests (after the video queue)
+
+Call `get_style_requests`. For each request (at most 1 per run):
+
+1. `get_reference_files` for its references; download and study them: palette, background, typography, card and panel shapes, motion speed, pacing, caption treatment, signature scene ideas.
+2. Express the look as **cinema style settings** (`video/PLAN.md`, "Style settings"): `theme`, `tokens` (bg, text, muted, accents, glows, heading_font, radius, background, motion, captions), plus `outputs`, `aspects` and `lengths` for its category. Keep ABET red recognisable unless the note says otherwise; keep text contrast readable.
+3. Write 5–8 creative specifications (`[["Look","…"],["Typography","…"],["Motion","…"],["Pacing","…"],["Captions","…"],["Signature scenes","…"]]`) and a one-sentence description, including which scene types best match the references.
+4. Render a preview: a 3-scene plan with the tokens, `--preview`, pick the best still, `get_style_upload_url`, upload it, then `save_style_draft`. The admin approves it in Creative Styles.
+5. If the references need something the cinema template can't do (a new kind of scene), still save the closest version and say in the description what is missing: a developer adds it in Claude Code.
+
 ## Content rules (non-negotiable)
 
 - ABET Global is a registered trading services provider in Anguilla (A000000977). Trading CFDs/forex is high risk.
@@ -45,4 +57,4 @@ If anything blocks you (missing facts, render error you can't fix, upload failur
 
 ## Finish
 
-Reply with one line per request: title, result (delivered / failed + reason) and the dashboard link.
+Reply with one line per video and style request: title, result (delivered / failed + reason) and the dashboard link.

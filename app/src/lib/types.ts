@@ -24,6 +24,13 @@ export interface Style {
   template_kind: string | null; template_version: number; output_formats: string[];
   required_assets: string[]; execution_config: Record<string, unknown>;
   approved_by?: string | null; approved_at?: string | null;
+  source_reference_ids?: string[]; claude_requested_at?: string | null; claude_built_at?: string | null; claude_note?: string | null;
+}
+
+/** A reference video, design or link the team collected for a category. */
+export interface StyleReference {
+  id: string; content_type: ContentType; title: string; notes: string; asset_id: string | null; url: string | null;
+  archived: boolean; created_by: string; created_at: string;
 }
 export type StyleStatus = 'draft' | 'in_development' | 'pending_approval' | 'approved';
 export interface ProductionJob {
@@ -34,7 +41,7 @@ export interface ProductionJob {
 }
 
 /** What the requester chose for a Claude-made file. */
-export interface VideoRequest { output: 'video' | 'image' | 'slides' | 'pdf'; aspect: string; length: string }
+export interface VideoRequest { output: 'video' | 'image' | 'slides' | 'pdf'; aspect: string; length: string; reference_ids?: string[] }
 
 export interface ContentItem {
   id: string; title: string; topic: string; type: ContentType; style_id: string | null;

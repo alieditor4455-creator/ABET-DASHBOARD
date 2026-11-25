@@ -669,3 +669,7 @@ button.link{background:none;border:0;padding:0;cursor:pointer}
 #root{height:100%}
 .wiz-top a.back{text-decoration:none}
 .field .seg{flex-wrap:wrap;align-self:flex-start;max-width:100%}
+.ref-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.ref-opt{display:flex;flex-direction:column;gap:6px;padding:6px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);text-align:left;font-size:12px;color:var(--text-2)}
+.ref-opt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ref-opt.on{border-color:var(--text);box-shadow:0 0 0 1px var(--text);color:var(--text)}

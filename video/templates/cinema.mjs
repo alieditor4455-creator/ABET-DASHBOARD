@@ -176,6 +176,34 @@ function chrome(ctx) {
   return `<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div><div class="grain"></div><div class="vig"></div></div>`;
 }
 
+/** Style settings from a style built from references (plan.tokens). Values are checked so a plan can't inject CSS. */
+const COLOR = /^(#[0-9a-fA-F]{3,8}|rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\))$/;
+const FONTS = { poppins: 'Poppins', 'space grotesk': 'Space Grotesk' };
+function tokenCss(tk = {}) {
+  const c = (v) => (typeof v === 'string' && COLOR.test(v.trim()) ? v.trim() : null);
+  let out = '';
+  const root = [['bg', '--bg'], ['text', '--fg'], ['muted', '--mute'], ['glass', '--glass'], ['line', '--line'], ['panel', '--panel']]
+    .map(([k, v]) => (c(tk[k]) ? `${v}:${c(tk[k])};` : '')).join('');
+  if (root) out += `:root{${root}}`;
+  for (const [k, pair] of Object.entries(tk.accents ?? {})) {
+    if (!/^[a-z]+$/.test(k) || !Array.isArray(pair) || !c(pair[0]) || !c(pair[1] ?? pair[0])) continue;
+    const [c1, c2] = [c(pair[0]), c(pair[1] ?? pair[0])];
+    out += `.ac-${k}{--a1:${c1};--a2:${c2}} .o-${k}{--o1:${c1};--o2:${c2}} .g-${k}{--g1:${c1};--g2:${c2}} .d-${k}{background:${c1}} .c-${k}{color:${c1}}`;
+    if (k === 'red' || k === 'primary') out += `:root{--a1:${c1};--a2:${c2}}`;
+  }
+  (tk.glows ?? []).slice(0, 4).forEach((g, i) => { if (c(g)) out += `.b${i + 1}{background:radial-gradient(closest-side,${c(g)},transparent)}`; });
+  const font = FONTS[String(tk.heading_font ?? '').toLowerCase()];
+  if (font) out += `.mega,.h,.giant,.c-line,.gc-text b,.cmp-h,.step b,.lead{font-family:'${font}',Poppins,sans-serif}`;
+  const r = Number(tk.radius);
+  if (r >= 0 && r <= 6) out += `.gcard,.panel3d,.pt,.step,.cmp,.bubble,.ph-balance{border-radius:${r}vmin}`;
+  if (tk.background === 'plain') out += '.blob{display:none}';
+  if (tk.background === 'grid') out += '.bg::before{content:"";position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:8vmin 8vmin;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 75%)}';
+  if (tk.motion === 'snappy') out += '.pin,.w,.pop2{animation-duration:.55s!important}';
+  if (tk.motion === 'slow') out += '.pin,.w,.pop2{animation-duration:1.4s!important}';
+  if (tk.captions === 'none') out += '.caption{display:none!important}';
+  return out;
+}
+
 function css(ctx) {
   const th = ctx.theme === 'light' ? 'light' : 'dark';
   const A = ACC[th];
@@ -375,6 +403,7 @@ body{position:relative;background:var(--bg);color:var(--fg);font-family:Poppins,
 .cw{color:var(--fg);opacity:.32;filter:blur(.12vmin)}
 .cw.on{opacity:1;filter:none}
 .cw.kw.on{color:var(--a1)}
+${tokenCss(ctx.plan?.tokens)}
 `;
 }
 

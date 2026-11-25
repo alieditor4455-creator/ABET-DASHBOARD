@@ -7,6 +7,7 @@ import { RENDERERS, canGenerate, previewOf } from '../lib/renderers';
 import { navigate } from '../lib/router';
 import { fmtBytes } from '../lib/format';
 import { StylePreview, useCapabilities } from './Studio';
+import { References } from './References';
 import type { Asset, ContentType, Style, StyleStatus } from '../lib/types';
 
 const FORMATS: Record<ContentType, string[]> = {
@@ -25,7 +26,14 @@ export function Styles({ params }: { params: URLSearchParams }) {
   const initial = (params.get('category') as ContentType | null) ?? 'reel';
   const [tab, setTab] = useState<ContentType | 'archived'>(TYPES[initial as ContentType] ? initial : 'reel');
   const [open, setOpen] = useState<Style | null>(null);
+  const [view, setView] = useState<'styles' | 'references'>(params.get('view') === 'references' ? 'references' : 'styles');
   const manage = can('styles.manage');
+  const qs = params.toString();
+  useEffect(() => {
+    setView(params.get('view') === 'references' ? 'references' : 'styles');
+    const c = params.get('category') as ContentType | null;
+    if (c && TYPES[c]) setTab(c);
+  }, [qs]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (params.get('new') && manage) void createStyle((params.get('category') as ContentType) ?? 'reel'); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   if (!data) return null;
   const visible = data.styles.filter((s) => !s.archived);
@@ -39,7 +47,12 @@ export function Styles({ params }: { params: URLSearchParams }) {
   return (
     <div className="page">
       <div className="page-head"><div><h1>Creative Styles</h1><p className="lead">{manage ? 'ABET’s approved looks, built from your references. Only approved, active styles with a working production template can generate content.' : 'ABET’s approved looks. Pick one in Content Studio.'}</p></div>
-        <div className="actions">{manage && tab !== 'archived' && <button className="btn primary" onClick={() => createStyle(tab as ContentType)}><Icon name="plus" />New {TYPES[tab as ContentType].name} style</button>}</div></div>
+        <div className="actions">{view === 'styles' && manage && tab !== 'archived' && <button className="btn primary" onClick={() => createStyle(tab as ContentType)}><Icon name="plus" />New {TYPES[tab as ContentType].name} style</button>}</div></div>
+      <div className="seg" role="group" aria-label="View" style={{ alignSelf: 'flex-start' }}>
+        <button type="button" aria-pressed={view === 'styles'} onClick={() => setView('styles')}><Icon name="palette" />Styles</button>
+        <button type="button" aria-pressed={view === 'references'} onClick={() => setView('references')}><Icon name="image" />References</button>
+      </div>
+      {view === 'references' ? <References initial={tab === 'archived' ? 'reel' : tab} /> : <>
       <div className="tabs" role="tablist">
         {TYPE_KEYS.map((k) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{TYPES[k].name} <span className="c">{visible.filter((s) => categoryOf(s) === k).length}</span></button>)}
         {manage && <button role="tab" aria-selected={tab === 'archived'} onClick={() => setTab('archived')}>Archived <span className="c">{data.styles.filter((s) => s.archived).length}</span></button>}
@@ -67,6 +80,7 @@ export function Styles({ params }: { params: URLSearchParams }) {
           {tab === 'archived' ? 'Archived styles are hidden from everyone and can be restored.' : manage ? 'Add a style, upload your reference videos or designs, and ask Claude to build its production template. It goes live once you approve it.' : 'An admin adds approved styles here.'}
         </Empty></div>
       )}
+      </>}
       {open && <StyleEditor style={open} onClose={() => setOpen(null)} onSaved={setOpen} />}
     </div>
   );
@@ -119,6 +133,8 @@ function StyleEditor({ style, onClose, onSaved }: { style: Style; onClose: () =>
 
   return (
     <Drawer title="Creative style" onClose={onClose} actions={<button className="btn sm primary" onClick={() => save()}><Icon name="check" size={16} />Save</button>}>
+      {d.claude_requested_at && !d.claude_built_at && d.status === 'in_development' && <Notice icon="sparkles">Claude is building this style from {d.source_reference_ids?.length ?? 0} reference{d.source_reference_ids?.length === 1 ? '' : 's'}. You’ll get a notification when the preview is ready to approve.</Notice>}
+      {d.claude_built_at && d.status === 'pending_approval' && <Notice kind="ok" icon="checkc">Claude built this style. Check the preview below, then <b>Approve and activate</b> it, or edit the notes and ask again.</Notice>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Chip cls={STYLE_STATUS[d.status].cls}>{STYLE_STATUS[d.status].label}</Chip>
         <Chip cls={d.active ? 'st-ok' : 'st-off'}>{d.active ? 'Active' : 'Inactive'}</Chip>

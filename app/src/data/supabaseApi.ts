@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Api, ItemPatch, NewItem, NewScript, Snapshot } from './api';
-import type { Asset, Caption, Comment, ContentItem, MfaFactor, Notification, ProductionJob, Platform, Profile, Role, Script, Session, Settings, Style } from '../lib/types';
+import type { Asset, Caption, Comment, ContentItem, MfaFactor, Notification, ProductionJob, Platform, Profile, Role, Script, Session, Settings, Style, StyleReference } from '../lib/types';
+import { TYPES } from '../lib/constants';
 
 const BUCKET = 'content';
 
@@ -112,6 +113,20 @@ export function createSupabaseApi(url: string, key: string): Api {
       const row = { ...s, created_by: s.id ? undefined : uid };
       if (s.id) return ok(await sb.from('styles').update(row).eq('id', s.id).select().single()) as Style;
       return ok(await sb.from('styles').insert(row).select().single()) as Style;
+    },
+    async listReferences() { return ok(await sb.from('style_references').select('*').eq('archived', false).order('created_at', { ascending: false })) as StyleReference[]; },
+    async addReference(r, file) {
+      const asset = file ? await api.uploadAsset(file, null, 'Reference') : null;
+      return ok(await sb.from('style_references').insert({ content_type: r.content_type, title: r.title.trim(), notes: r.notes.trim(), url: r.url?.trim() || null, asset_id: asset?.id ?? null, created_by: uid }).select().single()) as StyleReference;
+    },
+    async archiveReference(id, archived) { ok(await sb.from('style_references').update({ archived }).eq('id', id)); },
+    async requestStyle(r) {
+      const refs = ok(await sb.from('style_references').select('asset_id').in('id', r.reference_ids)) as { asset_id: string | null }[];
+      return ok(await sb.from('styles').insert({
+        name: r.name.trim(), category: TYPES[r.content_type].cat, content_type: r.content_type, description: '', status: 'in_development', active: false, is_custom: true,
+        spec: [], output_formats: [], required_assets: [], execution_config: {}, reference_asset_ids: refs.map((x) => x.asset_id).filter(Boolean),
+        source_reference_ids: r.reference_ids, claude_requested_at: new Date().toISOString(), claude_requested_by: uid, claude_note: r.note.trim() || null, created_by: uid,
+      }).select().single()) as Style;
     },
     async updateProfile(id, patch) { ok(await sb.from('profiles').update(patch).eq('id', id)); },
     async invite(email, role: Role) { ok(await sb.from('invitations').upsert({ email: email.trim().toLowerCase(), role, invited_by: uid })); },

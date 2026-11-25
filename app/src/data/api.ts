@@ -1,5 +1,5 @@
 import type {
-  Activity, Asset, Caption, VideoRequest, Comment, MfaFactor, Notification, ProductionJob, ContentItem, ContentType, Invitation, Platform, Profile, Role, Script, ScriptUnit,
+  Activity, Asset, Caption, VideoRequest, StyleReference, Comment, MfaFactor, Notification, ProductionJob, ContentItem, ContentType, Invitation, Platform, Profile, Role, Script, ScriptUnit,
   Session, Settings, SocialConnection, Style,
 } from '../lib/types';
 
@@ -43,6 +43,11 @@ export interface Api {
   updateAsset(id: string, patch: Partial<Pick<Asset, 'state' | 'item_id' | 'name'>>): Promise<void>;
   assetUrl(a: Asset): Promise<string>;
   saveStyle(s: Partial<Style> & { name: string; category: Style['category'] }): Promise<Style>;
+  listReferences(): Promise<StyleReference[]>;
+  addReference(r: { content_type: ContentType; title: string; notes: string; url?: string | null }, file?: File | null): Promise<StyleReference>;
+  archiveReference(id: string, archived: boolean): Promise<void>;
+  /** Creates a draft style for Claude to build from references (admins). */
+  requestStyle(r: { name: string; content_type: ContentType; reference_ids: string[]; note: string }): Promise<Style>;
   updateProfile(id: string, patch: Partial<Pick<Profile, 'role' | 'active' | 'full_name'>>): Promise<void>;
   invite(email: string, role: Role): Promise<void>;
   revokeInvite(email: string): Promise<void>;

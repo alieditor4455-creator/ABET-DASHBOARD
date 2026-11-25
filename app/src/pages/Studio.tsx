@@ -8,7 +8,8 @@ import { canGenerate, previewOf, rendererFor, workerConfig } from '../lib/render
 import { claudePrompt, complianceCheck, makeCaption, templateScript } from '../lib/script';
 import { ago, fmtBytes, fmtDateTime, isPast, toLocalInput } from '../lib/format';
 import { linkProps, navigate } from '../lib/router';
-import type { Asset, ContentItem, ContentType, Platform, ProductionJob, Script, ScriptUnit, VideoRequest } from '../lib/types';
+import type { Asset, ContentItem, ContentType, Platform, ProductionJob, Script, ScriptUnit, StyleReference, VideoRequest } from '../lib/types';
+import { RefThumb } from './References';
 
 const STEPS = [['script', 'Script'], ['style', 'Style'], ['produce', 'Production'], ['review', 'Review'], ['publish', 'Publish']] as const;
 type Step = (typeof STEPS)[number][0];
@@ -16,7 +17,7 @@ type Step = (typeof STEPS)[number][0];
 export function Studio({ id, params }: { id: string | null; params: URLSearchParams }) {
   const type = params.get('type') as ContentType | null;
   if (id) return <ItemWizard key={id} id={id} step={params.get('step') as Step | null} />;
-  if (type && TYPES[type]) return <NewTopic type={type} />;
+  if (type && TYPES[type]) return <NewTopic type={type} refId={params.get('ref')} />;
   return <StudioHome />;
 }
 
@@ -98,7 +99,7 @@ export function StylePreview({ assetId, motif, src }: { assetId: string | null; 
   return <Thumb motif={motif || 'mini'} />;
 }
 
-function NewTopic({ type }: { type: ContentType }) {
+function NewTopic({ type, refId }: { type: ContentType; refId?: string | null }) {
   const { api, run, can, data } = useStore();
   const caps = useCapabilities();
   const T = TYPES[type];
@@ -109,6 +110,14 @@ function NewTopic({ type }: { type: ContentType }) {
   const [styleId, setStyleId] = useState<string | null>(null);
   const [busy, setBusy] = useState<'' | 'full' | 'script' | 'video'>('');
   const [note, setNote] = useState('');
+  const [refs, setRefs] = useState<StyleReference[]>([]);
+  const [refAssets, setRefAssets] = useState<Asset[]>([]);
+  const [refIds, setRefIds] = useState<string[]>(refId ? [refId] : []);
+  useEffect(() => {
+    let on = true;
+    Promise.all([api.listReferences(), api.listAssets()]).then(([r, a]) => { if (on) { setRefs(r.filter((x) => x.content_type === type)); setRefAssets(a.filter((x) => x.kind === 'Reference')); } }).catch(() => {});
+    return () => { on = false; };
+  }, [api, type]);
   const styles = (data?.styles ?? []).filter((s) => s.content_type === type && s.status === 'approved' && s.active && !s.archived);
   const style = styles.find((s) => s.id === styleId) ?? null;
   const functional = !!style && canGenerate(style.template_kind, caps?.renderers);
@@ -126,7 +135,7 @@ function NewTopic({ type }: { type: ContentType }) {
     const item = await run(() => api.createItem({ title: topic.trim(), topic: topic.trim(), type, style_id: style?.id ?? null, audience: audience || null, objective: objective || null }));
     if (!item) { setBusy(''); return; }
     if (note.trim()) await api.updateItem(item.id, { request_note: note.trim() }).catch(() => {});
-    const r = await run(() => api.generate(item.id, m, m === 'video' ? req : undefined), m === 'video' ? `Sent to Claude: your ${what} is on its way` : m === 'full' ? 'Generating…' : 'Writing the script…');
+    const r = await run(() => api.generate(item.id, m, m === 'video' ? { ...req, reference_ids: refIds } : undefined), m === 'video' ? `Sent to Claude: your ${what} is on its way` : m === 'full' ? 'Generating…' : 'Writing the script…');
     setBusy('');
     navigate(`/studio/${item.id}${r ? '' : '?step=script'}`);
   };
@@ -177,6 +186,11 @@ function NewTopic({ type }: { type: ContentType }) {
               {wc.outputs.length > 1 && <div className="field"><span className="lbl">Output</span><div className="seg" role="group" aria-label="Output">{wc.outputs.map((o) => <button key={o} type="button" aria-pressed={req.output === o} onClick={() => setReq({ ...req, output: o })}>{outLabel[o]}</button>)}</div></div>}
               {wc.aspects.length > 1 && <div className="field"><span className="lbl">Shape</span><div className="seg" role="group" aria-label="Shape">{wc.aspects.map((a) => <button key={a} type="button" aria-pressed={req.aspect === a} onClick={() => setReq({ ...req, aspect: a })}>{a === '16:9' ? '16:9 landscape' : a === '9:16' ? '9:16 vertical' : a === '1:1' ? '1:1 square' : a === '4:5' ? '4:5 portrait' : a}</button>)}</div></div>}
               {req.output !== 'image' && <div className="field"><span className="lbl">Length</span><div className="seg" role="group" aria-label="Length">{wc.lengths.map((l) => <button key={l} type="button" aria-pressed={req.length === l} onClick={() => setReq({ ...req, length: l })}>{l}</button>)}</div></div>}
+              {refs.length > 0 && <div className="field"><span className="lbl">Make it like this (optional): pick up to 3 references</span>
+                <div className="ref-pick">{refs.slice(0, 12).map((r) => { const on = refIds.includes(r.id); return (
+                  <button key={r.id} type="button" className={`ref-opt${on ? ' on' : ''}`} aria-pressed={on} title={r.notes || r.title}
+                    onClick={() => setRefIds((s) => (on ? s.filter((x) => x !== r.id) : s.length >= 3 ? s : [...s, r.id]))}>
+                    <RefThumb r={r} asset={refAssets.find((a) => a.id === r.asset_id)} /><span>{r.title}</span></button>); })}</div></div>}
               <div className="field"><label htmlFor="cnote">Notes for Claude (optional)</label><input id="cnote" className="input" maxLength={400} placeholder="e.g. Mention the free demo account. Keep it simple for beginners." value={note} onChange={(e) => setNote(e.target.value)} /></div>
               <p className="muted" style={{ fontSize: 12.5 }}>Claude writes the script and builds the {what} in this style, then it appears here for review. The Claude video worker runs every hour, 9am–9pm (Pakistan time).</p>
             </div></section>

@@ -77,3 +77,18 @@ It supports all the scene types above plus:
 Icons: `trend`, `shield`, `book`, `target`, `globe`, `bulb`, `candles`, `clock`, `user`, `chat`, `lock`, `check`, `wallet`, `layers`, `phone`, `star`, `play`, `graduation`, `calendar`, `bolt`.
 
 A good explainer rhythm: `logo` → hook `statement` → `phone` or `bigstat` → `orbit` (what's included) → 2–4 `card`s (steps/levels) → `chat` (common question) → `statement` with `sequence` → `cta`. Mark keywords with `**` in headlines and captions. See `examples/how-abet-works-cinema.json`.
+
+### Style settings (`"tokens"`, cinema only)
+
+Styles built from references store their look in `execution_config.tokens`; copy them into the plan as `"tokens"`. All optional:
+
+| Token | Example | Effect |
+|---|---|---|
+| `bg`, `text`, `muted`, `panel`, `glass`, `line` | `"#0A0A1F"`, `"rgba(255,255,255,.06)"` | Canvas, text and surface colours (hex or rgb/rgba only) |
+| `accents` | `{"red": ["#FF6A4D", "#E0383B"], "blue": ["#5B9BFF", "#2F6BEB"]}` | Accent gradients per accent name; `red` (or `primary`) is the default accent |
+| `glows` | `["rgba(190,40,30,.55)", "rgba(10,120,100,.38)"]` | Up to 4 ambient light colours |
+| `heading_font` | `"Poppins"` or `"Space Grotesk"` | Headline font (ABET fonts only) |
+| `radius` | `1.2` (0–6) | Corner roundness of cards and panels |
+| `background` | `"aurora"` (default), `"plain"`, `"grid"` | Background treatment |
+| `motion` | `"smooth"` (default), `"snappy"`, `"slow"` | Entrance speed |
+| `captions` | `"none"` | Hide captions |

@@ -4,8 +4,8 @@
  * database triggers so the app behaves the same way.
  */
 import type { Api, ItemPatch, NewItem, NewScript, Snapshot } from './api';
-import type { Activity, Asset, Caption, Comment, ContentItem, ContentType, Invitation, Notification, ProductionJob, Permission, Profile, Script, Session, Settings, SocialConnection, Style } from '../lib/types';
-import { ROLE_PERMS } from '../lib/constants';
+import type { Activity, Asset, Caption, Comment, ContentItem, ContentType, Invitation, Notification, ProductionJob, Permission, Profile, Script, Session, Settings, SocialConnection, Style, StyleReference } from '../lib/types';
+import { ROLE_PERMS, TYPES } from '../lib/constants';
 import { templateScript } from '../lib/script';
 import seedStyles from './styleSeed.json';
 
@@ -47,6 +47,10 @@ export function createDemoApi(): Api {
     }),
     starter('ABET Clean Carousel', 'graphic', 'carousel', 'carousel', 'Starter style. Light step-by-step carousel slides with numbered cards and a swipe cue.', 'light', ['slides'], ['4:5', '1:1'], ['5 slides', '7 slides', '10 slides'], ['4:5 PNG slides']),
     starter('ABET Clean Guide', 'pdf', 'pdf', 'pdfdoc', 'Starter style. Light A4 guide: cover, clear sections, key numbers, steps and a closing page with the risk warning.', 'light', ['pdf'], ['A4'], ['4 pages', '8 pages', '12 pages'], ['A4 PDF']),
+  ];
+  const refs: StyleReference[] = [
+    { id: uuid(), content_type: 'explainer', title: 'ABET Forex Trading Academy film', notes: 'Dark cinematic look, glowing level cards, orbit of icons, word-by-word captions.', asset_id: null, url: 'https://abetglobal.com', archived: false, created_by: 'demo-oa', created_at: minsAgo(300) },
+    { id: uuid(), content_type: 'explainer', title: 'Light fintech promo', notes: 'Soft light gradient, frosted glass cards, smooth zoom through rings.', asset_id: null, url: 'https://example.com/reference', archived: false, created_by: 'demo-sm', created_at: minsAgo(200) },
   ];
   const sid = (_name: string): string | null => null;
   const jobs: ProductionJob[] = [];
@@ -186,6 +190,16 @@ export function createDemoApi(): Api {
     async signOutOthers() {},
     async claudeConnections() { return [{ connected_at: minsAgo(600), client_id: 'claude-demo' }]; },
     async exportAll() { settings = { ...settings, last_backup_at: new Date().toISOString() }; return { exported_at: new Date().toISOString(), source: 'ABET Content OS (demo)', profiles, styles, content_items: items, scripts, captions, comments, assets, activity }; },
+    async listReferences() { return delay(refs.filter((r) => !r.archived)); },
+    async addReference(r, file) {
+      const asset = file ? await api.uploadAsset(file, null, 'Reference') : null;
+      const x: StyleReference = { id: uuid(), content_type: r.content_type, title: r.title, notes: r.notes, url: r.url || null, asset_id: asset?.id ?? null, archived: false, created_by: me.id, created_at: new Date().toISOString() };
+      refs.unshift(x); return x;
+    },
+    async archiveReference(id, archived) { const r = refs.find((x) => x.id === id); if (r) r.archived = archived; },
+    async requestStyle(r) {
+      return api.saveStyle({ name: r.name, category: TYPES[r.content_type].cat, content_type: r.content_type, description: '', status: 'in_development', active: false, is_custom: true, spec: [], output_formats: [], required_assets: [], execution_config: {}, reference_asset_ids: [], source_reference_ids: r.reference_ids, claude_requested_at: new Date().toISOString(), claude_note: r.note || null });
+    },
     async capabilities() { return { claudeApi: false, renderers: [] }; },
     async listJobs(itemId) { return jobs.filter((j) => j.item_id === itemId); },
     async generate(itemId, mode, request) {

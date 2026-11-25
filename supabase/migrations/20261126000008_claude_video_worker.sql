@@ -191,3 +191,9 @@ from (values
    '{"engine": "claude", "template": "abet-motion", "theme": "light", "preview": "/style-previews/clean-guide.jpg", "outputs": ["pdf"], "aspects": ["A4"], "lengths": ["4 pages", "8 pages", "12 pages"]}')
 ) as v(name, category, ct, descr, motif, spec, formats, tk, cfg)
 where not exists (select 1 from public.styles s where s.name = v.name and s.category = v.category::public.style_category);
+
+-- Preview images for starter styles added by an earlier copy of this update.
+update public.styles set execution_config = execution_config || '{"preview": "/style-previews/clean-carousel.jpg"}'::jsonb
+ where name = 'ABET Clean Carousel' and template_kind = 'claude:abet-motion' and not execution_config ? 'preview';
+update public.styles set execution_config = execution_config || '{"preview": "/style-previews/clean-guide.jpg"}'::jsonb
+ where name = 'ABET Clean Guide' and template_kind = 'claude:abet-motion' and not execution_config ? 'preview';

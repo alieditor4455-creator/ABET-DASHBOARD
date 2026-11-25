@@ -280,6 +280,61 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'get_reference_files', title: 'Download reference files',
+    description: 'Returns short-lived download links for reference files (videos, images, PDFs) by reference id, as listed in a video brief ("references") or a style request. Download with curl -sSL -o <file> "<url>", then look at frames (ffmpeg) or images. Link-only references return the link, which may not be reachable.',
+    inputSchema: { type: 'object', required: ['reference_ids'], properties: { reference_ids: { type: 'array', items: uuid('Reference id'), minItems: 1, maxItems: 12 } } }, annotations: { readOnlyHint: true },
+    run: async (a, ctx) => {
+      const refs = must(await ctx.db.from('style_references').select('id,title,notes,url,asset_id').in('id', a.reference_ids as string[]), 'Reading references') as Json[];
+      const ids = refs.map((r) => r.asset_id).filter(Boolean) as string[];
+      const assets = ids.length ? (must(await ctx.db.from('assets').select('id,name,storage_path,size_bytes').in('id', ids), 'Reading files') as Json[]) : [];
+      const out = [];
+      for (const r of refs) {
+        const f = assets.find((x) => x.id === r.asset_id);
+        let download_url: string | null = null;
+        if (f) { const u = await ctx.db.storage.from('content').createSignedUrl(f.storage_path as string, 3600); download_url = u.data?.signedUrl ?? null; }
+        out.push({ id: r.id, title: r.title, notes: r.notes, link: r.url, file_name: f?.name ?? null, size_bytes: f?.size_bytes ?? null, download_url });
+      }
+      return { references: out, note: 'Download links expire in 1 hour.' };
+    },
+  },
+  {
+    name: 'get_style_requests', title: 'Get style requests',
+    description: 'Lists new styles an admin asked Claude to build from the team’s references. For each: download the references (get_reference_files), study them (look, colour, type, layout, motion, pacing), adapt them to the ABET brand (get_brand_kit), express the style as settings for the cinema template (video/PLAN.md, "Style settings"), render a preview, upload it (get_style_upload_url) and save with save_style_draft. An admin approves it in the dashboard.',
+    inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true },
+    run: async (_a, ctx) => {
+      const rows = must(await ctx.db.rpc('style_requests'), 'Reading style requests') as Json[];
+      return { count: rows.length, requests: rows, next: rows.length ? 'Build the oldest request first.' : 'No style requests.' };
+    },
+  },
+  {
+    name: 'get_style_upload_url', title: 'Get an upload link for a style preview',
+    description: 'One-time link to upload a preview image (PNG/JPG) or short preview video (MP4) for a style request. Upload with curl -sS -X PUT -H "Content-Type: <type>" --data-binary @<file> "<upload_url>", then pass the path to save_style_draft.',
+    inputSchema: { type: 'object', required: ['style_id', 'file_name'], properties: { style_id: uuid('Style id from get_style_requests'), file_name: str('e.g. preview.png') } },
+    run: async (a, ctx) => {
+      const safe = String(a.file_name).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'preview.png';
+      if (!/\.(png|jpg|jpeg|mp4)$/.test(safe)) throw new ToolError('Use a .png, .jpg or .mp4 file name.');
+      const p = `styles/${a.style_id}/${Date.now()}-${safe}`;
+      const r = await ctx.db.storage.from('content').createSignedUploadUrl(p);
+      if (r.error || !r.data) throw new ToolError(`Couldn’t create the upload link: ${r.error?.message ?? 'unknown error'}`);
+      const type = safe.endsWith('.mp4') ? 'video/mp4' : safe.endsWith('.png') ? 'image/png' : 'image/jpeg';
+      return { upload_url: r.data.signedUrl, path: p, content_type: type, example: `curl -sS -X PUT -H "Content-Type: ${type}" --data-binary @${safe} "${r.data.signedUrl}"` };
+    },
+  },
+  {
+    name: 'save_style_draft', title: 'Save a style built from references',
+    description: 'Saves the style you built for a style request: description, creative specifications ([[label, value], …]), template settings (execution_config: template, theme, tokens, outputs, aspects, lengths) and the uploaded preview. The style goes to "pending approval" and the requester is notified.',
+    inputSchema: { type: 'object', required: ['style_id', 'description', 'spec', 'execution_config'], properties: {
+      style_id: uuid('Style id'), description: str('One or two sentences describing the look'),
+      spec: { type: 'array', items: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2 }, description: '[["Look","…"],["Typography","…"],["Motion","…"],["Pacing","…"],["Captions","…"]]' },
+      execution_config: { type: 'object', description: '{"template":"cinema","theme":"dark","tokens":{…},"outputs":["video"],"aspects":["16:9","9:16"],"lengths":["30 seconds","60–90 seconds"]}' },
+      preview_path: str('Path from get_style_upload_url'),
+    } },
+    run: async (a, ctx) => {
+      const r = must(await ctx.db.rpc('save_style_draft', { p_style: a.style_id, p_description: String(a.description), p_spec: a.spec, p_config: a.execution_config, p_preview_path: a.preview_path ?? null }), 'Saving the style') as Json;
+      return { ...r, link: `${ctx.appUrl}/styles`, next: 'An admin reviews the preview and clicks Approve and activate.' };
+    },
+  },
+  {
     name: 'fail_video_job', title: 'Report a failed video request',
     description: 'Stops a claimed request and tells the requester why, in plain words (e.g. the topic needs facts you don’t have). Use it instead of leaving a request half-done.',
     inputSchema: { type: 'object', required: ['job_id', 'reason'], properties: { job_id: uuid('Claimed request id'), reason: str('Plain-language reason and what the requester can do') } },
