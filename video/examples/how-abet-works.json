@@ -1,0 +1,19 @@
+{
+  "title": "How ABET Global works",
+  "output": "video",
+  "aspect": "16:9",
+  "theme": "light",
+  "captions": true,
+  "scenes": [
+    { "type": "title", "duration": 4.5, "kicker": "ABET Global", "headline": "How **ABET Global** works", "sub": "From sign-up to your first trade on MetaTrader 5", "caption": "Here is how ABET Global works, step by step." },
+    { "type": "steps", "duration": 8, "heading": "Getting started", "steps": [
+      { "title": "Open an account", "text": "Sign up on abetglobal.com" },
+      { "title": "Verify", "text": "Confirm your identity" },
+      { "title": "Practise", "text": "Try a free demo account first" }
+    ], "caption": "Open an account on our website, verify your identity, and practise on a free demo account before trading live." },
+    { "type": "points", "duration": 7, "heading": "Trade on **MetaTrader 5**", "points": ["Desktop, web and mobile", "Real-time prices and charts", "Built-in risk tools like stop-loss"], "caption": "You trade on MetaTrader 5, on desktop, web or mobile, with real-time charts and tools like stop-loss." },
+    { "type": "chart", "duration": 6, "heading": "Read the market", "trend": "up", "label": "EUR/USD", "caption": "Use charts to understand how prices move before you place a trade." },
+    { "type": "statement", "duration": 5, "text": "Leverage can **increase losses** as well as gains.", "sub": "Learn first. Trade only with money you can afford to lose.", "caption": "Remember: leverage can increase losses as well as gains. Learn first, and only trade with money you can afford to lose." },
+    { "type": "cta", "duration": 4.5, "headline": "Start with a free **demo account**", "action": "Open a demo account", "url": "abetglobal.com", "caption": "Start today with a free demo account at abetglobal.com." }
+  ]
+}

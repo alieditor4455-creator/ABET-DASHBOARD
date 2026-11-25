@@ -4,11 +4,11 @@ import { Icon } from '../components/Icon';
 import { Avatar, Chip, CopyButton, Empty, Notice, Panel, StatusChip, Thumb } from '../components/ui';
 import { Comments } from '../components/Account';
 import { PLAT, PLAT_KEYS, PLAT_LIMIT, ROLE_LABEL, TOPIC_SUGGESTIONS, TYPES, TYPE_KEYS } from '../lib/constants';
-import { rendererFor } from '../lib/renderers';
+import { canGenerate, rendererFor, workerConfig } from '../lib/renderers';
 import { claudePrompt, complianceCheck, makeCaption, templateScript } from '../lib/script';
 import { ago, fmtBytes, fmtDateTime, isPast, toLocalInput } from '../lib/format';
 import { linkProps, navigate } from '../lib/router';
-import type { Asset, ContentItem, ContentType, Platform, ProductionJob, Script, ScriptUnit } from '../lib/types';
+import type { Asset, ContentItem, ContentType, Platform, ProductionJob, Script, ScriptUnit, VideoRequest } from '../lib/types';
 
 const STEPS = [['script', 'Script'], ['style', 'Style'], ['produce', 'Production'], ['review', 'Review'], ['publish', 'Publish']] as const;
 type Step = (typeof STEPS)[number][0];
@@ -106,17 +106,26 @@ function NewTopic({ type }: { type: ContentType }) {
   const [audience, setAudience] = useState('');
   const [objective, setObjective] = useState('');
   const [styleId, setStyleId] = useState<string | null>(null);
-  const [busy, setBusy] = useState<'' | 'full' | 'script'>('');
+  const [busy, setBusy] = useState<'' | 'full' | 'script' | 'video'>('');
+  const [note, setNote] = useState('');
   const styles = (data?.styles ?? []).filter((s) => s.content_type === type && s.status === 'approved' && s.active && !s.archived);
   const style = styles.find((s) => s.id === styleId) ?? null;
-  const functional = !!style && !!rendererFor(style.template_kind) && !!caps?.renderers.includes(style.template_kind ?? '');
+  const functional = !!style && canGenerate(style.template_kind, caps?.renderers);
+  const byClaude = rendererFor(style?.template_kind)?.engine === 'claude-worker';
+  const wc = workerConfig(style?.execution_config);
+  const [req, setReq] = useState<VideoRequest>({ output: 'video', aspect: '16:9', length: '' });
+  useEffect(() => { if (style) setReq({ output: wc.outputs[0], aspect: wc.aspects[0], length: wc.lengths[Math.min(1, wc.lengths.length - 1)] }); }, [style?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const what = req.output === 'pdf' ? 'PDF' : req.output === 'slides' ? 'carousel' : req.output === 'image' ? 'image' : 'video';
+  const outLabel = { video: 'Video', image: 'Static image', slides: 'Slides', pdf: 'PDF' } as const;
 
   const start = async (mode: 'full' | 'script') => {
     if (!topic.trim()) return;
-    setBusy(mode);
+    const m = mode === 'full' && byClaude ? 'video' : mode;
+    setBusy(m);
     const item = await run(() => api.createItem({ title: topic.trim(), topic: topic.trim(), type, style_id: style?.id ?? null, audience: audience || null, objective: objective || null }));
     if (!item) { setBusy(''); return; }
-    const r = await run(() => api.generate(item.id, mode), mode === 'full' ? 'Generating…' : 'Writing the script…');
+    if (note.trim()) await api.updateItem(item.id, { request_note: note.trim() }).catch(() => {});
+    const r = await run(() => api.generate(item.id, m, m === 'video' ? req : undefined), m === 'video' ? `Sent to Claude: your ${what} is on its way` : m === 'full' ? 'Generating…' : 'Writing the script…');
     setBusy('');
     navigate(`/studio/${item.id}${r ? '' : '?step=script'}`);
   };
@@ -144,7 +153,7 @@ function NewTopic({ type }: { type: ContentType }) {
             {styles.length ? (
               <div className="gallery">
                 {styles.map((s) => {
-                  const ok = !!rendererFor(s.template_kind) && !!caps?.renderers.includes(s.template_kind ?? '');
+                  const ok = canGenerate(s.template_kind, caps?.renderers);
                   return (
                     <button key={s.id} className={`sty${s.id === styleId ? ' sel' : ''}`} aria-pressed={s.id === styleId} onClick={() => setStyleId(s.id === styleId ? null : s.id)}>
                       <StylePreview assetId={s.preview_asset_id} motif={s.motif} />
@@ -161,13 +170,23 @@ function NewTopic({ type }: { type: ContentType }) {
             )}
           </div></section>
 
+          {style && byClaude && (
+            <section className="panel"><div className="panel-b" style={{ paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <span className="muted" style={{ fontSize: 12.5, fontWeight: 500 }}>3 · Shape and length</span>
+              {wc.outputs.length > 1 && <div className="field"><span className="lbl">Output</span><div className="seg" role="group" aria-label="Output">{wc.outputs.map((o) => <button key={o} type="button" aria-pressed={req.output === o} onClick={() => setReq({ ...req, output: o })}>{outLabel[o]}</button>)}</div></div>}
+              {wc.aspects.length > 1 && <div className="field"><span className="lbl">Shape</span><div className="seg" role="group" aria-label="Shape">{wc.aspects.map((a) => <button key={a} type="button" aria-pressed={req.aspect === a} onClick={() => setReq({ ...req, aspect: a })}>{a === '16:9' ? '16:9 landscape' : a === '9:16' ? '9:16 vertical' : a === '1:1' ? '1:1 square' : a === '4:5' ? '4:5 portrait' : a}</button>)}</div></div>}
+              {req.output !== 'image' && <div className="field"><span className="lbl">Length</span><div className="seg" role="group" aria-label="Length">{wc.lengths.map((l) => <button key={l} type="button" aria-pressed={req.length === l} onClick={() => setReq({ ...req, length: l })}>{l}</button>)}</div></div>}
+              <div className="field"><label htmlFor="cnote">Notes for Claude (optional)</label><input id="cnote" className="input" maxLength={400} placeholder="e.g. Mention the free demo account. Keep it simple for beginners." value={note} onChange={(e) => setNote(e.target.value)} /></div>
+              <p className="muted" style={{ fontSize: 12.5 }}>Claude writes the script and builds the {what} in this style, then it appears here for review. The Claude video worker runs every hour, 9am–9pm (Pakistan time).</p>
+            </div></section>
+          )}
           {caps && !caps.claudeApi && <Notice icon="info">The Claude API isn’t connected yet, so Claude writes through the <b>Claude queue</b>: someone with Claude asks it to “write scripts for everything in the ABET Content OS Claude queue”, and the result appears here automatically.</Notice>}
           <div className="wiz-foot">
             <button className="btn" disabled={!topic.trim() || !!busy || !can('content.create')} onClick={() => start('script')} title="Claude writes the script; you or your editors produce it">{busy === 'script' ? <Icon name="loader" spin size={16} /> : <Icon name="file" />}Write script only</button>
             <div className="r">
               <button className="btn primary" style={{ height: 44 }} disabled={!topic.trim() || !functional || !!busy || !can('content.create')}
                 title={!style ? 'Choose an approved style' : !functional ? 'This style’s production template isn’t built yet' : undefined} onClick={() => start('full')}>
-                {busy === 'full' ? <Icon name="loader" spin size={16} /> : <Icon name="sparkles" />}Generate content</button>
+                {busy === 'full' || busy === 'video' ? <Icon name="loader" spin size={16} /> : <Icon name="sparkles" />}{style && byClaude ? `Generate ${what}` : 'Generate content'}</button>
             </div>
           </div>
         </div>
@@ -176,7 +195,7 @@ function NewTopic({ type }: { type: ContentType }) {
             <div className="sr-row"><dt>Format</dt><dd>{T.meta}</dd></div>
             <div className="sr-row"><dt>Topic</dt><dd>{topic || '—'}</dd></div>
             <div className="sr-row"><dt>Style</dt><dd>{style?.name ?? '—'}</dd></div>
-            <div className="sr-row"><dt>Claude</dt><dd>{caps ? (caps.claudeApi ? 'Claude API' : 'Claude queue') : '…'}</dd></div>
+            <div className="sr-row"><dt>Claude</dt><dd>{style && byClaude ? 'Claude video worker' : caps ? (caps.claudeApi ? 'Claude API' : 'Claude queue') : '…'}</dd></div>
           </dl>
           <p className="muted" style={{ fontSize: 12, marginTop: 12 }}>Claude researches the topic, picks the audience and angle, writes the hook, script, storyboard and captions in ABET’s voice. Compliance and publishing approvals still apply.</p></div></aside>
       </div>
@@ -210,6 +229,7 @@ function ItemWizard({ id, step }: { id: string; step: Step | null }) {
   const loadScripts = useCallback(async () => setScripts(await api.listScripts(id)), [api, id]);
   const loadAssets = useCallback(async () => setAssets((await api.listAssets()).filter((a) => a.item_id === id && a.kind !== 'Reference')), [api, id]);
   useEffect(() => { loadScripts(); loadAssets(); }, [loadScripts, loadAssets, item?.updated_at]);
+  const [job, setJob] = useState<ProductionJob | null>(null);
 
   if (!data) return null;
   if (!item) return <div className="page"><Empty icon="folder" title="This content no longer exists" action={<a className="btn" {...linkProps('/studio')}>Back to Studio</a>}>It may have been deleted, or the link is wrong.</Empty></div>;
@@ -217,8 +237,11 @@ function ItemWizard({ id, step }: { id: string; step: Step | null }) {
   const approved = scripts?.find((s) => s.approved_at);
   const hasAsset = (assets?.length ?? 0) > 0;
   const hasStyles = data.styles.some((s) => s.content_type === item.type && s.status === 'approved' && s.active);
-  const max = !approved ? 0 : !hasAsset ? 2 : item.status === 'approved' || item.status === 'completed' ? 4 : 3;
-  const auto: Step = !approved ? 'script' : !item.style_id && hasStyles && !hasAsset ? 'style' : !hasAsset || item.status === 'draft' || item.status === 'in_production' ? 'produce' : item.status === 'in_review' ? 'review' : 'publish';
+  // A file made by Claude (or uploaded) can be reviewed straight away; script approval happens with the file.
+  const fileReady = hasAsset && ['in_review', 'approved', 'completed'].includes(item.status);
+  const videoLive = job?.kind === 'video' && ['queued', 'running', 'waiting_for_claude'].includes(job.status);
+  const max = fileReady ? (item.status === 'in_review' ? 3 : 4) : !approved ? 0 : !hasAsset ? 2 : item.status === 'approved' || item.status === 'completed' ? 4 : 3;
+  const auto: Step = fileReady ? (item.status === 'in_review' ? 'review' : 'publish') : !approved ? 'script' : !item.style_id && hasStyles && !hasAsset ? 'style' : !hasAsset || item.status === 'draft' || item.status === 'in_production' ? 'produce' : item.status === 'in_review' ? 'review' : 'publish';
   const cur = step && STEPS.findIndex(([k]) => k === step) <= max ? step : auto;
   const curIdx = STEPS.findIndex(([k]) => k === cur);
   const goStep = (s: Step) => navigate(`/studio/${id}?step=${s}`);
@@ -231,12 +254,12 @@ function ItemWizard({ id, step }: { id: string; step: Step | null }) {
       <div className="wiz-top"><a className="back" {...linkProps('/studio')}><Icon name="arrowL" size={16} />Studio</a><Stepper current={curIdx} max={max} onGo={(n) => goStep(STEPS[n][0])} /></div>
       <div className="wiz">
         <div className="wiz-main">
-          <JobPanel itemId={item.id} onDone={() => { loadScripts(); loadAssets(); }} />
-          {scripts === null || assets === null ? <Panel><div className="writing"><div className="ln" style={{ width: '50%', height: 22 }} /><div className="ln" style={{ width: '90%' }} /><div className="ln" style={{ width: '80%' }} /></div></Panel>
+          <JobPanel itemId={item.id} onJob={setJob} onDone={() => { loadScripts(); loadAssets(); }} />
+          {videoLive && !step ? null : scripts === null || assets === null ? <Panel><div className="writing"><div className="ln" style={{ width: '50%', height: 22 }} /><div className="ln" style={{ width: '90%' }} /><div className="ln" style={{ width: '80%' }} /></div></Panel>
             : cur === 'script' ? <ScriptStep item={item} scripts={scripts} reload={loadScripts} onNext={() => goStep('style')} />
             : cur === 'style' ? <StyleStep item={item} onNext={() => goStep('produce')} onBack={() => goStep('script')} />
             : cur === 'produce' ? <ProduceStep item={item} script={approved!} assets={assets} reload={loadAssets} onNext={() => goStep('review')} />
-            : cur === 'review' ? <ReviewStep item={item} script={approved!} assets={assets} onNext={() => goStep('publish')} onBack={() => goStep('script')} />
+            : cur === 'review' ? <ReviewStep item={item} script={approved ?? scripts[0]} assets={assets} videoJob={job?.kind === 'video' ? job : null} onNext={() => goStep('publish')} onBack={() => goStep('script')} />
             : <PublishStep item={item} assets={assets} />}
         </div>
         <aside className="panel summary"><div className="panel-h"><span className="ico"><Icon name={T.icon} size={16} /></span><h3>{T.name}</h3></div>
@@ -423,34 +446,39 @@ function StyleStep({ item, onNext, onBack }: { item: ContentItem; onNext: () => 
 }
 
 /* ------------------------------------------------------------------ live production progress */
-function JobPanel({ itemId, onDone }: { itemId: string; onDone: () => void }) {
+function JobPanel({ itemId, onDone, onJob }: { itemId: string; onDone: () => void; onJob?: (j: ProductionJob | null) => void }) {
   const { api, refresh } = useStore();
   const [jobs, setJobs] = useState<ProductionJob[]>([]);
   const prev = useRef<string | null>(null);
   const load = useCallback(async () => {
     const j = await api.listJobs(itemId).catch(() => []);
     setJobs(j);
+    onJob?.(j[0] ?? null);
     const st = j[0]?.status ?? null;
     if (prev.current && prev.current !== st && (st === 'succeeded' || st === 'failed')) { onDone(); refresh(); }
     prev.current = st;
-  }, [api, itemId, onDone, refresh]);
+  }, [api, itemId, onDone, refresh, onJob]);
   useEffect(() => { load(); }, [load]);
   const job = jobs[0];
   const live = job && ['queued', 'running', 'waiting_for_claude'].includes(job.status);
-  useEffect(() => { if (!live) return; const t = setInterval(load, job.status === 'waiting_for_claude' ? 10000 : 3000); return () => clearInterval(t); }, [live, load, job?.status]);
+  useEffect(() => { if (!live) return; const t = setInterval(load, job.status === 'waiting_for_claude' ? 10000 : job.kind === 'video' ? 5000 : 3000); return () => clearInterval(t); }, [live, load, job?.status, job?.kind]);
   if (!job || (job.status === 'succeeded' && Date.now() - new Date(job.updated_at).getTime() > 10 * 60000)) return null;
   const cls = job.status === 'failed' ? 'err' : job.status === 'succeeded' ? 'ok' : '';
+  const video = job.kind === 'video';
+  const what = job.request?.output === 'pdf' ? 'PDF' : job.request?.output === 'slides' ? 'carousel' : job.request?.output === 'image' ? 'image' : 'video';
   return (
     <section className="panel"><div className="panel-b" style={{ paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span className="ico"><Icon name={job.status === 'failed' ? 'alert' : job.status === 'succeeded' ? 'checkc' : 'loader'} spin={live} /></span>
-        <b style={{ fontWeight: 500 }}>{job.status === 'waiting_for_claude' ? 'Waiting for Claude (Claude queue)' : job.stage}</b>
+        <b style={{ fontWeight: 500 }}>{job.status === 'waiting_for_claude' ? (video ? `Waiting for Claude to make your ${what}` : 'Waiting for Claude (Claude queue)') : job.status === 'succeeded' && video ? `Your ${what} is ready for review` : job.stage}</b>
         <span className="muted num" style={{ marginLeft: 'auto', fontSize: 12.5 }}>{job.progress}%</span>
       </div>
       <div className={`bar ${cls === 'err' ? 'brand' : 'gen'}`}><span style={{ width: `${job.progress}%` }} /></div>
       <div className="checks">{job.steps.map((s, n) => <div key={n} className={`check ${s.status === 'failed' ? 'bad' : 'ok'}`}><Icon name={s.status === 'failed' ? 'xc' : s.status === 'running' ? 'loader' : s.status === 'warning' ? 'alert' : 'checkc'} size={16} spin={s.status === 'running'} /><span>{s.name}{s.detail ? ` · ${s.detail}` : ''}</span></div>)}</div>
       {job.status === 'failed' && <Notice kind="err" icon="alert">{job.error}</Notice>}
-      {job.status === 'waiting_for_claude' && <p className="muted" style={{ fontSize: 12.5 }}>Someone with Claude asks it to “write scripts for everything in the ABET Content OS Claude queue”. You can leave this page; you’ll get a notification.</p>}
+      {video && job.request && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip>{job.request.aspect}</Chip>{job.request.output !== 'image' && job.request.length && <Chip>{job.request.length}</Chip>}{job.worker && <Chip icon="sparkles">{job.worker}</Chip>}</div>}
+      {job.status === 'waiting_for_claude' && video && <p className="muted" style={{ fontSize: 12.5 }}>The Claude video worker checks for new requests every hour, 9am–9pm (Pakistan time). Claude writes the script, builds the {what} and puts it here for review. You can leave this page; you’ll get a notification.</p>}
+      {job.status === 'waiting_for_claude' && !video && <p className="muted" style={{ fontSize: 12.5 }}>Someone with Claude asks it to “write scripts for everything in the ABET Content OS Claude queue”. You can leave this page; you’ll get a notification.</p>}
       {live && job.status !== 'waiting_for_claude' && <p className="muted" style={{ fontSize: 12.5 }}>You can leave this page. Production continues and you’ll get a notification.</p>}
     </div></section>
   );
@@ -537,8 +565,8 @@ function MediaView({ asset }: { asset: Asset }) {
   useEffect(() => { let on = true; api.assetUrl(asset).then((u) => on && setUrl(u || null), () => on && setErr(true)); return () => { on = false; }; }, [api, asset]);
   if (err) return <Notice kind="err" icon="alert">Couldn’t load this file. Try again in a moment.</Notice>;
   if (!url) return <div className="media-frame"><span className="muted">{asset.storage_path.startsWith('demo/') ? 'Sample item: no real file in demo mode' : 'Loading preview…'}</span></div>;
-  const isVid = /\.(mp4|mov|webm|m4v)$/i.test(asset.name) || asset.kind === 'Video';
-  const isImg = /\.(png|jpe?g|gif|webp|svg)$/i.test(asset.name);
+  const isVid = /\.(mp4|mov|webm|m4v)$/i.test(asset.name) || /\.(mp4|mov|webm|m4v)$/i.test(asset.storage_path) || asset.kind === 'Video';
+  const isImg = /\.(png|jpe?g|gif|webp|svg)$/i.test(asset.name) || /\.(png|jpe?g|gif|webp)$/i.test(asset.storage_path);
   return (
     <div className="media-frame">
       {isVid ? <video src={url} controls playsInline /> : isImg ? <img src={url} alt={asset.name} /> : <a className="btn" href={url} target="_blank" rel="noopener noreferrer"><Icon name="external" size={16} />Open {asset.name}</a>}
@@ -546,24 +574,28 @@ function MediaView({ asset }: { asset: Asset }) {
   );
 }
 
-function ReviewStep({ item, script, assets, onNext, onBack }: { item: ContentItem; script: Script; assets: Asset[]; onNext: () => void; onBack: () => void }) {
+function ReviewStep({ item, script, assets, videoJob, onNext, onBack }: { item: ContentItem; script: Script | undefined; assets: Asset[]; videoJob: ProductionJob | null; onNext: () => void; onBack: () => void }) {
   const { api, run, can } = useStore();
   const [note, setNote] = useState('');
-  const asset = assets[0];
-  const checks = complianceCheck(script.title, script.units);
+  const [shown, setShown] = useState(0);
+  const asset = assets[Math.min(shown, assets.length - 1)];
+  const checks = script ? complianceCheck(script.title, script.units) : [];
   const approve = async () => {
     const r = await run(() => api.updateItem(item.id, { status: 'approved' }), 'Approved');
     if (r) { await api.addApproval(item.id, 'creative', 'approved').catch(() => {}); onNext(); }
   };
   const changes = () => run(async () => {
-    await api.updateItem(item.id, { status: 'draft' });
+    await api.updateItem(item.id, videoJob ? { status: 'draft', request_note: note || null } : { status: 'draft' });
     await api.addApproval(item.id, 'creative', 'changes_requested', note || undefined).catch(() => {});
     await api.log(`requested changes on “${item.title}”${note ? `: ${note}` : ''}`, item.id);
-  }, 'Sent back with your notes');
+    // Made by Claude: send it straight back to Claude with the notes, same shape and length.
+    if (videoJob?.request) await api.generate(item.id, 'video', videoJob.request);
+  }, videoJob ? 'Sent back to Claude with your notes' : 'Sent back with your notes');
   return (
     <>
       <section className="panel"><div className="panel-b pv" style={{ paddingTop: 24 }}>
-        <div>{asset ? <MediaView asset={asset} /> : <Empty icon="film" title="No file yet">Upload the finished file in Production.</Empty>}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{asset ? <MediaView key={asset.id} asset={asset} /> : <Empty icon="film" title="No file yet">Upload the finished file in Production.</Empty>}
+          {assets.length > 1 && <div className="seg" role="group" aria-label="Files">{assets.map((a, n) => <button key={a.id} type="button" aria-pressed={a.id === asset?.id} onClick={() => setShown(n)}>{n + 1}</button>)}</div>}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           <div><div className="muted" style={{ fontSize: 12.5 }}>{TYPES[item.type].name}</div><h2 style={{ fontSize: 20, marginTop: 4 }}>{item.title}</h2></div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><StatusChip status={item.status} />{asset && <Chip icon="cloud">{asset.name} · {fmtBytes(asset.size_bytes)}</Chip>}</div>
@@ -575,7 +607,7 @@ function ReviewStep({ item, script, assets, onNext, onBack }: { item: ContentIte
         </div>
       </div></section>
       {item.status === 'in_review' && can('content.approve') && (
-        <Panel icon="edit" title="Feedback (optional)"><textarea className="textarea" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="What should change? This goes back to the owner with the item." aria-label="Feedback" /></Panel>
+        <Panel icon="edit" title="Feedback (optional)"><textarea className="textarea" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder={videoJob ? 'What should Claude change? “Request changes” sends it back to Claude with these notes.' : 'What should change? This goes back to the owner with the item.'} aria-label="Feedback" /></Panel>
       )}
       <div className="wiz-foot">
         <button className="btn" onClick={onBack}><Icon name="arrowL" />Script</button>

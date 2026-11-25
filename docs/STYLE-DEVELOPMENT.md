@@ -18,6 +18,16 @@ ABET's creative styles are built from ABET's own references. The app ships with 
 
 Name, description, references, preview, specifications, output formats, required assets, active or inactive, and **Execution settings** (JSON passed to the renderer, for example colours, durations and font sizes) are stored in the database. Editing them takes effect at once. Only a new or changed *renderer code* needs a deploy.
 
+## Claude-made styles (the video worker)
+
+Styles whose template starts with `claude:` (the six starter styles use `claude:abet-motion`) are made by **Claude**, not by the dashboard:
+
+1. In Content Studio someone picks a category, types a topic, picks the style, shape and length, and clicks **Generate video** (or carousel, PDF, image). The request goes into the **video queue** (`production_jobs`, kind `video`).
+2. A scheduled Claude Code session (hourly, 9am–9pm Pakistan time) runs the `abet-video-worker` skill (`.claude/skills/abet-video-worker/SKILL.md`). Through the ABET Content OS connector it claims the request, writes and saves the script, writes a scene plan (`video/PLAN.md`), renders it with `node video/render.mjs`, uploads the file and completes the request.
+3. The file appears on the item page and in the Asset Library, the item moves to **In review**, and the requester is notified. **Request changes** sends it back to Claude with the reviewer's notes.
+
+A new reference-based style can reuse `abet-motion` with different `execution_config` (theme, shapes, lengths), or get its own template file in `video/templates/` and its own template id.
+
 ## How generation runs
 
 Content Studio: **Category → Topic → Style → Generate**.

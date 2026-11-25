@@ -3,7 +3,7 @@ import { useStore } from '../data/store';
 import { Icon } from '../components/Icon';
 import { Chip, Drawer, Empty, Notice } from '../components/ui';
 import { STYLE_STATUS, TYPES, TYPE_KEYS } from '../lib/constants';
-import { RENDERERS, rendererFor } from '../lib/renderers';
+import { RENDERERS, canGenerate } from '../lib/renderers';
 import { navigate } from '../lib/router';
 import { fmtBytes } from '../lib/format';
 import { StylePreview, useCapabilities } from './Studio';
@@ -47,7 +47,7 @@ export function Styles({ params }: { params: URLSearchParams }) {
       {list.length ? (
         <div className="gallery">
           {list.map((s) => {
-            const built = !!rendererFor(s.template_kind) && !!caps?.renderers.includes(s.template_kind ?? '');
+            const built = canGenerate(s.template_kind, caps?.renderers);
             return (
               <button key={s.id} className="sty" onClick={() => setOpen(s)}>
                 <StylePreview assetId={s.preview_asset_id} motif={s.motif} />
@@ -87,7 +87,7 @@ function StyleEditor({ style, onClose, onSaved }: { style: Style; onClose: () =>
   useEffect(() => { setD(style); setCfg(JSON.stringify(style.execution_config ?? {}, null, 2)); }, [style]);
   useEffect(() => { loadRefs(); }, [loadRefs]);
   const type = (d.content_type ?? 'reel') as ContentType;
-  const built = !!rendererFor(d.template_kind) && !!caps?.renderers.includes(d.template_kind ?? '');
+  const built = canGenerate(d.template_kind, caps?.renderers);
   const renderers = Object.values(RENDERERS).filter((r) => r.contentTypes.includes(type));
 
   const save = async (patch: Partial<Style> = {}) => {

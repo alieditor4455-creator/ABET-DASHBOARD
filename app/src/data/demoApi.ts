@@ -4,7 +4,7 @@
  * database triggers so the app behaves the same way.
  */
 import type { Api, ItemPatch, NewItem, NewScript, Snapshot } from './api';
-import type { Activity, Asset, Caption, Comment, ContentItem, Invitation, Notification, ProductionJob, Permission, Profile, Script, Session, Settings, SocialConnection, Style } from '../lib/types';
+import type { Activity, Asset, Caption, Comment, ContentItem, ContentType, Invitation, Notification, ProductionJob, Permission, Profile, Script, Session, Settings, SocialConnection, Style } from '../lib/types';
 import { ROLE_PERMS } from '../lib/constants';
 import { templateScript } from '../lib/script';
 import seedStyles from './styleSeed.json';
@@ -27,7 +27,20 @@ export function createDemoApi(): Api {
   ];
   // No preset styles: categories start empty until ABET's own reference-based styles are approved.
   void seedStyles;
-  const styles: Style[] = [];
+  // The same six starter styles the database update adds (made by Claude from the video queue).
+  const starter = (name: string, category: Style['category'], content_type: ContentType, motif: string, description: string, theme: string, outputs: string[], aspects: string[], lengths: string[], output_formats: string[]): Style => ({
+    id: uuid(), category, name, description, motif, complexity: 'Medium', spec: [['Look', theme === 'light' ? 'Light canvas, ink text, ABET red accents' : theme === 'dark' ? 'Near-black canvas, red glow, white type' : 'ABET red background, white type']], is_custom: true, archived: false,
+    content_type, status: 'approved', active: true, reference_asset_ids: [], preview_asset_id: null, template_kind: 'claude:abet-motion', template_version: 1,
+    output_formats, required_assets: [], execution_config: { engine: 'claude', template: 'abet-motion', theme, outputs, aspects, lengths },
+  });
+  const styles: Style[] = [
+    starter('ABET Clean Explainer', 'video', 'explainer', 'mg', 'Starter style. Light, clean motion graphics: big headings, step cards, charts and captions in ABET red and ink.', 'light', ['video'], ['16:9', '9:16', '1:1'], ['30 seconds', '60–90 seconds', '2–3 minutes'], ['16:9 MP4', '9:16 MP4', '1:1 MP4']),
+    starter('ABET Clean Chapters', 'video', 'yt', 'chart', 'Starter style. Light chaptered explainer for YouTube: chapter titles, step cards, charts and captions.', 'light', ['video'], ['16:9'], ['2–3 minutes', '3–5 minutes'], ['16:9 MP4']),
+    starter('ABET Bold Kinetic', 'video', 'reel', 'typeled', 'Starter style. Bold ABET-red reels with big kinetic type and fast scenes for Reels, Shorts and TikTok.', 'bold', ['video'], ['9:16', '1:1', '4:5'], ['15 seconds', '30 seconds', '45–60 seconds'], ['9:16 MP4', '1:1 MP4', '4:5 MP4']),
+    starter('ABET Premium Dark Ad', 'ad', 'ad', 'ad', 'Starter style. Dark premium ads with a red glow, a clear offer and a strong call to action. Video or static.', 'dark', ['video', 'image'], ['9:16', '1:1', '4:5', '16:9'], ['6 seconds', '15 seconds', '30 seconds'], ['9:16 MP4', '1:1 MP4', '1:1 PNG']),
+    starter('ABET Clean Carousel', 'graphic', 'carousel', 'carousel', 'Starter style. Light step-by-step carousel slides with numbered cards and a swipe cue.', 'light', ['slides'], ['4:5', '1:1'], ['5 slides', '7 slides', '10 slides'], ['4:5 PNG slides']),
+    starter('ABET Clean Guide', 'pdf', 'pdf', 'pdfdoc', 'Starter style. Light A4 guide: cover, clear sections, key numbers, steps and a closing page with the risk warning.', 'light', ['pdf'], ['A4'], ['4 pages', '8 pages', '12 pages'], ['A4 PDF']),
+  ];
   const sid = (_name: string): string | null => null;
   const jobs: ProductionJob[] = [];
   const mk = (title: string, type: ContentItem['type'], style: string, owner: string, status: ContentItem['status'], upd: number, extra: Partial<ContentItem> = {}): ContentItem => ({
@@ -168,8 +181,12 @@ export function createDemoApi(): Api {
     async exportAll() { settings = { ...settings, last_backup_at: new Date().toISOString() }; return { exported_at: new Date().toISOString(), source: 'ABET Content OS (demo)', profiles, styles, content_items: items, scripts, captions, comments, assets, activity }; },
     async capabilities() { return { claudeApi: false, renderers: [] }; },
     async listJobs(itemId) { return jobs.filter((j) => j.item_id === itemId); },
-    async generate(itemId) {
+    async generate(itemId, mode, request) {
       const it = items.find((i) => i.id === itemId) ?? fail('Not found');
+      if (mode === 'video') {
+        const j: ProductionJob = { id: uuid(), item_id: itemId, style_id: it.style_id, kind: 'video', request, status: 'waiting_for_claude', stage: 'Waiting for Claude', progress: 5, steps: [{ name: 'Request sent to Claude', status: 'done', at: new Date().toISOString() }], error: null, result_asset_id: null, engine: 'claude-worker', created_by: me.id, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+        jobs.unshift(j); return { jobId: j.id, engine: 'claude-worker' as const };
+      }
       it.needs_script = true; it.requested_by = me.id;
       const j: ProductionJob = { id: uuid(), item_id: itemId, style_id: it.style_id, status: 'waiting_for_claude', stage: 'Waiting for Claude', progress: 10, steps: [{ name: 'Sent to the Claude queue', status: 'done', at: new Date().toISOString() }], error: null, result_asset_id: null, engine: 'claude-queue', created_by: me.id, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
       jobs.unshift(j); return { jobId: j.id, engine: 'claude-queue' as const };

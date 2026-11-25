@@ -30,7 +30,11 @@ export interface ProductionJob {
   id: string; item_id: string; style_id: string | null; status: 'queued' | 'running' | 'succeeded' | 'failed' | 'waiting_for_claude';
   stage: string; progress: number; steps: { name: string; status: string; at?: string; detail?: string }[];
   error: string | null; result_asset_id: string | null; engine: string | null; created_by: string; created_at: string; updated_at: string;
+  kind?: 'script' | 'full' | 'video'; request?: VideoRequest; worker?: string | null; claimed_at?: string | null;
 }
+
+/** What the requester chose for a Claude-made file. */
+export interface VideoRequest { output: 'video' | 'image' | 'slides' | 'pdf'; aspect: string; length: string }
 
 export interface ContentItem {
   id: string; title: string; topic: string; type: ContentType; style_id: string | null;

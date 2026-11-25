@@ -163,12 +163,12 @@ export function createSupabaseApi(url: string, key: string): Api {
       return { claudeApi: false, renderers: [] };
     },
     async listJobs(itemId) { return ok(await sb.from('production_jobs').select('*').eq('item_id', itemId).order('created_at', { ascending: false }).limit(10)) as ProductionJob[]; },
-    async generate(itemId, mode) {
+    async generate(itemId, mode, request) {
       const { data } = await sb.auth.getSession();
-      const r = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` }, body: JSON.stringify({ itemId, mode }) });
+      const r = await fetch('/api/generate', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` }, body: JSON.stringify({ itemId, mode, request }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error((j as { error?: string }).error ?? `Generate failed (${r.status})`);
-      return j as { jobId: string; engine: 'claude-api' | 'claude-queue' };
+      return j as { jobId: string; engine: 'claude-api' | 'claude-queue' | 'claude-worker' };
     },
     async health() {
       const db = await sb.from('app_settings').select('id').limit(1);

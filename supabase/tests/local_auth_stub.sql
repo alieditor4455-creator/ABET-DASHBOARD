@@ -22,7 +22,7 @@ grant usage on schema auth to authenticated, anon;
 -- Minimal stand-in for Supabase Storage.
 create schema if not exists storage;
 create table if not exists storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint);
-create table if not exists storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text, owner uuid);
+create table if not exists storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text, owner uuid, metadata jsonb);
 alter table storage.objects enable row level security;
 grant usage on schema storage to authenticated, anon;
 grant select, insert on storage.objects to authenticated;

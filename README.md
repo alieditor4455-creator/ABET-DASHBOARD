@@ -13,11 +13,14 @@ ABET Global's content workspace: plan, write (with Claude), produce, review, sch
 
 There are six categories: Short Form, Long Form, Explainer Videos, PDFs, Carousels and Ads. The flow is Category → Topic → Style → Generate. Creative styles are created by ABET admins from their own references; see `docs/STYLE-DEVELOPMENT.md`.
 
+**Videos, carousels, PDFs and ads are made by Claude**, not by the dashboard: requests go into a video queue, and a scheduled Claude Code session (skill `abet-video-worker`) builds each file with the templates in `video/` and uploads it back for review.
+
 ## Docs
 
 - `docs/SETUP.md`: accounts, keys and deployment
 - `docs/ARCHITECTURE.md`: how the pieces fit
 - `docs/STYLE-DEVELOPMENT.md`: reference → production template → approval
+- `video/`: the video templates and renderer Claude uses (`video/PLAN.md`)
 - `brand/README.md`: official ABET brand assets
 
 ## Tests

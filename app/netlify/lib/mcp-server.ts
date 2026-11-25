@@ -221,6 +221,73 @@ export const TOOLS: Tool[] = [
       return { scheduled: rows, approved_but_unscheduled: approved, range: { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) } };
     },
   },
+
+  // ---------------------------------------------------------------- Claude video worker
+  {
+    name: 'get_video_queue', title: 'Get the video queue',
+    description: 'Lists videos, carousels, PDFs and ads the team requested in the dashboard and is waiting for Claude to make. Making them needs Claude Code with the ABET-DASHBOARD repository (skill: abet-video-worker). For each request: claim_video_job, write and save the script, render the file with video/render.mjs, upload it with get_upload_url, then complete_video_job.',
+    inputSchema: { type: 'object', properties: {} }, annotations: { readOnlyHint: true },
+    run: async (_a, ctx) => {
+      const rows = must(await ctx.db.rpc('video_queue'), 'Reading the video queue') as Json[];
+      return { count: rows.length, requests: rows, next: rows.length ? 'Claim the oldest request with claim_video_job.' : 'The video queue is empty. Nothing to do.' };
+    },
+  },
+  {
+    name: 'claim_video_job', title: 'Claim a video request',
+    description: 'Claims one request from the video queue so no other Claude makes it too, and returns the full brief: topic, format, style (template and settings), shape, length and notes. The dashboard shows “Claude is writing the script”.',
+    inputSchema: { type: 'object', required: ['job_id'], properties: { job_id: uuid('Request id (job_id) from get_video_queue'), worker: str('Who is making it, e.g. "Claude Code (scheduled)"') } },
+    run: async (a, ctx) => {
+      const brief = must(await ctx.db.rpc('claim_video_job', { p_job: a.job_id, p_worker: a.worker ? String(a.worker).slice(0, 80) : 'Claude' }), 'Claiming the request') as Json;
+      await log(ctx, `started making “${(brief.item as Json)?.title ?? 'a request'}”`, (brief.item as Json)?.id as string);
+      return { ...brief, link: link(ctx, (brief.item as Json).id as string), next: 'Call get_brand_kit, write the script and save it with save_script, write the scene plan (video/PLAN.md), preview, render, upload, then complete_video_job. Report progress with report_video_progress.' };
+    },
+  },
+  {
+    name: 'report_video_progress', title: 'Report video progress',
+    description: 'Updates the progress the requester sees in the dashboard while you make a claimed request, e.g. stage "Rendering the video", progress 60.',
+    inputSchema: { type: 'object', required: ['job_id', 'stage', 'progress'], properties: { job_id: uuid('Claimed request id'), stage: str('Short stage shown in the dashboard'), progress: { type: 'integer', minimum: 0, maximum: 95 }, step: str('Optional finished step to add to the log') } },
+    run: async (a, ctx) => {
+      must(await ctx.db.rpc('video_job_progress', { p_job: a.job_id, p_stage: String(a.stage), p_progress: Number(a.progress), p_step: a.step ? String(a.step) : null }), 'Updating progress');
+      return { ok: true };
+    },
+  },
+  {
+    name: 'get_upload_url', title: 'Get a secure upload link',
+    description: 'Returns a one-time link to upload a finished file for a claimed request. Upload with: curl -sS -X PUT -H "Content-Type: <type>" --data-binary @<file> "<upload_url>". Then pass the returned path to complete_video_job. Files up to 50 MB.',
+    inputSchema: { type: 'object', required: ['job_id', 'file_name'], properties: { job_id: uuid('Claimed request id'), file_name: str('File name, e.g. how-abet-works-16x9.mp4, slide-01.png, guide.pdf') } },
+    run: async (a, ctx) => {
+      const job = must(await ctx.db.from('production_jobs').select('id,status,claimed_by,kind').eq('id', a.job_id as string).maybeSingle(), 'Reading the request') as Json | null;
+      if (!job || job.kind !== 'video' || job.status !== 'running' || job.claimed_by !== ctx.userId) throw new ToolError('Claim this request with claim_video_job first.');
+      const safe = String(a.file_name).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'file';
+      if (!/\.(mp4|png|jpg|jpeg|pdf)$/.test(safe)) throw new ToolError('Use a .mp4, .png, .jpg or .pdf file name.');
+      const p = `jobs/${job.id}/${safe}`;
+      const r = await ctx.db.storage.from('content').createSignedUploadUrl(p);
+      if (r.error || !r.data) throw new ToolError(`Couldn’t create the upload link: ${r.error?.message ?? 'unknown error'}`);
+      const type = safe.endsWith('.mp4') ? 'video/mp4' : safe.endsWith('.pdf') ? 'application/pdf' : safe.endsWith('.png') ? 'image/png' : 'image/jpeg';
+      return { upload_url: r.data.signedUrl, path: p, content_type: type, method: 'PUT', example: `curl -sS -X PUT -H "Content-Type: ${type}" --data-binary @${safe} "${r.data.signedUrl}"` };
+    },
+  },
+  {
+    name: 'complete_video_job', title: 'Finish a video request',
+    description: 'Marks a claimed request as done after the files are uploaded. Saves each file to the Asset Library, moves the item to In review and notifies the requester. kind is Video for MP4, Graphic for PNG/JPG, PDF for PDF.',
+    inputSchema: { type: 'object', required: ['job_id', 'files'], properties: {
+      job_id: uuid('Claimed request id'), note: str('Short note for the reviewer, e.g. "16:9, 62 seconds, captions on"'),
+      files: { type: 'array', minItems: 1, maxItems: 20, items: { type: 'object', required: ['path', 'kind'], properties: { path: str('Path returned by get_upload_url'), name: str('Display name in the Asset Library'), kind: { type: 'string', enum: ['Video', 'Graphic', 'PDF'] } } } },
+    } },
+    run: async (a, ctx) => {
+      const r = must(await ctx.db.rpc('complete_video_job', { p_job: a.job_id, p_files: a.files, p_note: a.note ? String(a.note).slice(0, 300) : null }), 'Finishing the request') as Json;
+      return { ...r, link: `${link(ctx, r.item_id as string)}?step=review`, next: 'Done. The requester reviews and approves it in the dashboard.' };
+    },
+  },
+  {
+    name: 'fail_video_job', title: 'Report a failed video request',
+    description: 'Stops a claimed request and tells the requester why, in plain words (e.g. the topic needs facts you don’t have). Use it instead of leaving a request half-done.',
+    inputSchema: { type: 'object', required: ['job_id', 'reason'], properties: { job_id: uuid('Claimed request id'), reason: str('Plain-language reason and what the requester can do') } },
+    run: async (a, ctx) => {
+      must(await ctx.db.rpc('fail_video_job', { p_job: a.job_id, p_error: String(a.reason) }), 'Reporting the failure');
+      return { ok: true };
+    },
+  },
 ];
 
 const ok = (id: unknown, result: unknown) => ({ jsonrpc: '2.0', id, result });
@@ -241,7 +308,7 @@ export async function handleRpc(msg: Json, ctx: Ctx): Promise<Json | null> {
         protocolVersion: SUPPORTED_VERSIONS.includes(want) ? want : SUPPORTED_VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'abet-content-os', title: 'ABET Content OS', version: '1.0.0' },
-        instructions: 'ABET Content OS is ABET Global’s content workspace. Call get_brand_kit before writing anything. Save scripts with save_script; people approve and publish in the dashboard. When asked to work through the queue, call get_claude_queue and write a script for each item.',
+        instructions: 'ABET Content OS is ABET Global’s content workspace. Call get_brand_kit before writing anything. Save scripts with save_script; people approve and publish in the dashboard. When asked to work through the queue, call get_claude_queue and write a script for each item. Videos, carousels, PDFs and ads requested in the dashboard are in get_video_queue; making them needs Claude Code with the ABET-DASHBOARD repository (skill: abet-video-worker).',
       });
     }
     case 'ping': return ok(id, {});

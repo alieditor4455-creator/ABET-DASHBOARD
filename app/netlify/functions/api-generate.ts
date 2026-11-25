@@ -17,16 +17,37 @@ export default async (req: Request) => {
   const { data: u, error: ue } = await db.auth.getUser(token);
   if (ue || !u.user) return json({ error: 'Your session expired. Sign in again.' }, 401);
 
-  let body: { itemId?: string; mode?: string };
+  let body: { itemId?: string; mode?: string; request?: { output?: string; aspect?: string; length?: string } };
   try { body = await req.json(); } catch { return json({ error: 'Bad request' }, 400); }
-  const mode = body.mode === 'full' ? 'full' : 'script';
+  const mode = body.mode === 'full' ? 'full' : body.mode === 'video' ? 'video' : 'script';
   const { data: item } = await db.from('content_items').select('id,title,style_id,request_note').eq('id', body.itemId ?? '').maybeSingle();
   if (!item) return json({ error: 'Content item not found, or your role can’t see it.' }, 404);
 
-  let style: { id: string; template_kind: string | null; status: string; active: boolean } | null = null;
+  let style: { id: string; template_kind: string | null; status: string; active: boolean; execution_config: Record<string, unknown> | null } | null = null;
   if (item.style_id) {
-    const { data } = await db.from('styles').select('id,template_kind,status,active').eq('id', item.style_id).maybeSingle();
+    const { data } = await db.from('styles').select('id,template_kind,status,active,execution_config').eq('id', item.style_id).maybeSingle();
     style = data;
+  }
+
+  // Made by Claude: queue the request for the Claude video worker (Claude Code + this repository's video templates).
+  if (mode === 'video') {
+    if (!style || style.status !== 'approved' || !style.active) return json({ error: 'Choose an approved style first.' }, 400);
+    if (!style.template_kind?.startsWith('claude:')) return json({ error: 'This style isn’t made by Claude.' }, 400);
+    const cfg = (style.execution_config ?? {}) as { outputs?: string[]; aspects?: string[]; lengths?: string[] };
+    const r = body.request ?? {};
+    const pick = (v: string | undefined, list: string[] | undefined, d: string) => (v && (!list?.length || list.includes(v)) ? v : list?.[0] ?? d);
+    const request = { output: pick(r.output, cfg.outputs, 'video'), aspect: pick(r.aspect, cfg.aspects, '16:9'), length: pick(r.length, cfg.lengths, '60–90 seconds') };
+    const { data: open } = await db.from('production_jobs').select('id').eq('item_id', item.id).eq('kind', 'video').in('status', ['waiting_for_claude', 'running']).limit(1);
+    if (open?.length) return json({ error: 'Claude is already working on this item.' }, 409);
+    const { data: job, error: je } = await db.from('production_jobs').insert({
+      item_id: item.id, style_id: style.id, created_by: u.user.id, kind: 'video', request,
+      status: 'waiting_for_claude', engine: 'claude-worker', stage: 'Waiting for Claude', progress: 5,
+      steps: [{ name: 'Request sent to Claude', status: 'done', at: new Date().toISOString() }],
+    }).select('id').single();
+    if (je || !job) return json({ error: `Couldn’t send the request: ${je?.message ?? 'unknown error'}` }, 400);
+    await db.from('content_items').update({ status: 'in_production' }).eq('id', item.id).eq('status', 'draft');
+    await db.rpc('log_claude_activity', { p_message: `asked Claude to make “${item.title}” (${request.output}, ${request.aspect})`, p_item_id: item.id });
+    return json({ jobId: job.id, engine: 'claude-worker' });
   }
   if (mode === 'full') {
     if (!style || style.status !== 'approved' || !style.active) return json({ error: 'Choose an approved style first.' }, 400);
@@ -35,7 +56,7 @@ export default async (req: Request) => {
 
   const api = claudeApiConfigured();
   const { data: job, error: je } = await db.from('production_jobs').insert({
-    item_id: item.id, style_id: style?.id ?? null, created_by: u.user.id,
+    item_id: item.id, style_id: style?.id ?? null, created_by: u.user.id, ...(mode === 'full' ? { kind: 'full' } : {}),
     status: api ? 'queued' : 'waiting_for_claude', engine: api ? 'claude-api' : 'claude-queue',
     stage: api ? 'Starting' : 'Waiting for Claude', progress: api ? 5 : 10,
     steps: [{ name: api ? 'Job created' : 'Sent to the Claude queue', status: 'done', at: new Date().toISOString() }],
