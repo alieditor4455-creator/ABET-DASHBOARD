@@ -82,6 +82,8 @@ export function createDemoApi(): Api {
   }));
   const blobs = new Map<string, string>();
   const activity: Activity[] = [
+    { id: 5, item_id: null, actor_id: 'demo-bt', via: 'system', kind: 'signup', message: 'signed up and joined as Video Editor', created_at: minsAgo(5) },
+    { id: 4, item_id: null, actor_id: 'demo-sm', via: 'app', kind: 'signin', message: 'signed in', created_at: minsAgo(9) },
     { id: 3, item_id: null, actor_id: 'demo-mq', via: 'app', message: 'added a compliance note to “How leverage works…”', created_at: minsAgo(12) },
     { id: 2, item_id: null, actor_id: 'demo-hk', via: 'claude', message: 'saved a script for “Stop-loss basics for beginners”', created_at: minsAgo(40) },
     { id: 1, item_id: null, actor_id: 'demo-sm', via: 'app', message: 'approved “Trading sessions: Tokyo, London, New York”', created_at: minsAgo(240) },
@@ -191,6 +193,9 @@ export function createDemoApi(): Api {
     async workerStatus() { return { waiting: jobs.filter((j) => j.kind === 'video' && j.status === 'waiting_for_claude').length, running: 0, styleRequests: styles.filter((s) => s.claude_requested_at && !s.claude_built_at).length, last: { at: minsAgo(55), status: 'succeeded', worker: 'Claude Code (scheduled)' } }; },
     async claudeConnections() { return [{ connected_at: minsAgo(600), client_id: 'claude-demo' }]; },
     async exportAll() { settings = { ...settings, last_backup_at: new Date().toISOString() }; return { exported_at: new Date().toISOString(), source: 'ABET Content OS (demo)', profiles, styles, content_items: items, scripts, captions, comments, assets, activity }; },
+    async listActivity(f) {
+      return delay(activity.filter((a) => (!f.kind || (a.kind ?? 'content') === f.kind) && (!f.actorId || a.actor_id === f.actorId) && (!f.before || a.id < f.before) && (!f.since || a.created_at >= f.since)).slice(0, 100));
+    },
     async listReferences() { return delay(refs.filter((r) => !r.archived)); },
     async addReference(r, file) {
       const asset = file ? await api.uploadAsset(file, null, 'Reference') : null;

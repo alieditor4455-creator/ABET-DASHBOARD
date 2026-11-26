@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useStore } from '../data/store';
 import { Icon } from '../components/Icon';
 import { Avatar, Chip, Empty, Modal, Notice, Panel, Switch } from '../components/ui';
 import { HANDLES, PERM_LABEL, PLAT, PLAT_KEYS, ROLES, ROLE_LABEL, ROLE_PERMS, TYPES, TYPE_KEYS } from '../lib/constants';
 import { ago } from '../lib/format';
 import { linkProps, navigate } from '../lib/router';
-import type { Permission, Role } from '../lib/types';
+import type { Activity, Permission, Role } from '../lib/types';
 
-const TABS = [['team', 'Team', 'users'], ['roles', 'Roles & permissions', 'lock'], ['social', 'Social connections', 'at'], ['brand', 'Brand assets', 'brand'], ['styles', 'Creative styles', 'palette'], ['storage', 'Storage', 'drive'], ['backup', 'Backup', 'download'], ['auto', 'Automation', 'zap']] as const;
+const TABS = [['team', 'Team', 'users'], ['activity', 'Activity', 'clock'], ['roles', 'Roles & permissions', 'lock'], ['social', 'Social connections', 'at'], ['brand', 'Brand assets', 'brand'], ['styles', 'Creative styles', 'palette'], ['storage', 'Storage', 'drive'], ['backup', 'Backup', 'download'], ['auto', 'Automation', 'zap']] as const;
 
 export function Admin({ params }: { params: URLSearchParams }) {
   const { can } = useStore();
@@ -18,7 +18,7 @@ export function Admin({ params }: { params: URLSearchParams }) {
       <div className="page-head"><div><h1>Admin Panel</h1><p className="lead">Workspace settings. Only admins see this page.</p></div></div>
       <div className="admin">
         <nav className="panel subnav" aria-label="Admin sections">{TABS.map(([k, l, i]) => <a key={k} className="sb-link" style={{ height: 38 }} aria-current={tab === k} {...linkProps(`/admin?tab=${k}`)}><Icon name={i} size={16} />{l}</a>)}</nav>
-        <div style={{ minWidth: 0 }}>{tab === 'team' ? <Team /> : tab === 'roles' ? <Roles /> : tab === 'social' ? <Social /> : tab === 'brand' ? <BrandAssets /> : tab === 'styles' ? <StyleAdmin /> : tab === 'storage' ? <Storage /> : tab === 'backup' ? <Backup /> : <Automation />}</div>
+        <div style={{ minWidth: 0 }}>{tab === 'team' ? <Team /> : tab === 'activity' ? <ActivityLog /> : tab === 'roles' ? <Roles /> : tab === 'social' ? <Social /> : tab === 'brand' ? <BrandAssets /> : tab === 'styles' ? <StyleAdmin /> : tab === 'storage' ? <Storage /> : tab === 'backup' ? <Backup /> : <Automation />}</div>
       </div>
     </div>
   );
@@ -147,6 +147,60 @@ function Storage() {
         <select className="select sm" value={s.storage_limit_gb} disabled={!can('team.manage')} aria-label="Storage limit" onChange={(e) => run(() => api.updateSettings({ storage_limit_gb: +e.target.value }), 'Saved')}>{[1, 8, 10, 50, 100].map((g) => <option key={g} value={g}>{g} GB</option>)}</select></div>
       <div className="setting"><div className="st-t"><b>Never delete files automatically</b><span>Always on. Archive hides a file but keeps it.</span></div><Switch id="nd" checked disabled label="Never delete files" /></div>
       <div className="setting"><div className="st-t"><b>Database backups</b><span>The free plan has no automatic backups. Supabase Pro ($25/month) adds daily backups.</span></div><Chip cls="st-warn">Not included</Chip></div>
+    </Panel>
+  );
+}
+
+const KIND_LABEL: Record<string, string> = { '': 'All activity', content: 'Content', signup: 'Sign-ups', signin: 'Sign-ins' };
+const KIND_ICON: Record<string, string> = { content: 'edit', signup: 'userplus', signin: 'logout', team: 'users', style: 'palette', claude: 'sparkles' };
+
+function ActivityLog() {
+  const { api, data } = useStore();
+  const [kind, setKind] = useState('');
+  const [actor, setActor] = useState('');
+  const [range, setRange] = useState('7');
+  const [rows, setRows] = useState<Activity[] | null>(null);
+  const [more, setMore] = useState(false);
+  const since = range === 'all' ? undefined : new Date(Date.now() - Number(range) * 86400000).toISOString();
+  const load = useCallback(async (before?: number) => {
+    const r = await api.listActivity({ kind: kind || undefined, actorId: actor || undefined, since, before }).catch(() => []);
+    setRows((old) => (before && old ? [...old, ...r] : r)); setMore(r.length === 100);
+  }, [api, kind, actor, since]);
+  useEffect(() => { setRows(null); load(); }, [load]);
+  const people = data?.profiles ?? [];
+  const who = (a: Activity) => people.find((p) => p.id === a.actor_id);
+  const day = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  let lastDay = '';
+  return (
+    <Panel icon="clock" title="Team activity" right={<span className="muted" style={{ fontSize: 12.5 }}>Who signed up, signed in and what they did. Admins also get these in the bell.</span>}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div className="seg" role="group" aria-label="Type">{Object.entries(KIND_LABEL).map(([k, l]) => <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)}>{l}</button>)}</div>
+        <select className="select" style={{ width: 'auto', minWidth: 170 }} value={actor} onChange={(e) => setActor(e.target.value)} aria-label="Person"><option value="">Everyone</option>{people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select>
+        <select className="select" style={{ width: 'auto' }} value={range} onChange={(e) => setRange(e.target.value)} aria-label="Period"><option value="1">Last 24 hours</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="all">All time</option></select>
+      </div>
+      {rows === null ? <div className="writing"><div className="ln" style={{ width: '60%' }} /><div className="ln" style={{ width: '80%' }} /></div>
+        : !rows.length ? <Empty icon="clock" title="Nothing here yet">No activity matches these filters.</Empty>
+        : <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {rows.map((a) => {
+              const d = day(a.created_at); const head = d !== lastDay ? d : ''; lastDay = d;
+              const p = who(a);
+              return (
+                <div key={a.id}>
+                  {head && <div className="muted" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase', padding: '14px 0 6px' }}>{head}</div>}
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '9px 0', borderTop: '1px solid var(--border)' }}>
+                    {p ? <Avatar profile={p} /> : <span className="ico"><Icon name={a.via === 'claude' ? 'sparkles' : 'users'} size={16} /></span>}
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 13.5 }}>
+                      <b style={{ fontWeight: 600 }}>{p?.full_name ?? (a.via === 'claude' ? 'Claude' : 'Someone')}</b> {a.message}
+                      {a.item_id && <a className="link" style={{ marginLeft: 6, fontSize: 12.5 }} {...linkProps(`/studio/${a.item_id}`)}>Open</a>}
+                    </div>
+                    <Chip icon={KIND_ICON[a.kind ?? 'content'] ?? 'edit'}>{(a.kind ?? 'content') === 'content' ? (a.via === 'claude' ? 'Claude' : 'Content') : ({ signup: 'Sign-up', signin: 'Sign-in' } as Record<string, string>)[a.kind ?? ''] ?? a.kind}</Chip>
+                    <span className="muted num" style={{ fontSize: 12, whiteSpace: 'nowrap' }} title={new Date(a.created_at).toLocaleString('en-GB')}>{ago(a.created_at)}</span>
+                  </div>
+                </div>
+              );
+            })}
+            {more && <button className="btn sm" style={{ alignSelf: 'center', marginTop: 12 }} onClick={() => load(rows[rows.length - 1].id)}>Show older</button>}
+          </div>}
     </Panel>
   );
 }

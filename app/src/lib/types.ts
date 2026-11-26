@@ -66,7 +66,7 @@ export interface Asset {
   backup_verified: boolean; created_by: string; created_at: string;
 }
 
-export interface Activity { id: number; item_id: string | null; actor_id: string | null; via: 'app' | 'claude' | 'system'; message: string; created_at: string }
+export interface Activity { id: number; item_id: string | null; actor_id: string | null; via: 'app' | 'claude' | 'system'; message: string; created_at: string; kind?: 'content' | 'signup' | 'signin' | 'team' | 'style' | 'claude' }
 
 export interface Settings {
   last_backup_at?: string | null;

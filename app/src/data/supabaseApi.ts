@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Api, ItemPatch, NewItem, NewScript, Snapshot } from './api';
-import type { Asset, Caption, Comment, ContentItem, MfaFactor, Notification, ProductionJob, Platform, Profile, Role, Script, Session, Settings, Style, StyleReference } from '../lib/types';
+import type { Activity, Asset, Caption, Comment, ContentItem, MfaFactor, Notification, ProductionJob, Platform, Profile, Role, Script, Session, Settings, Style, StyleReference } from '../lib/types';
 import { TYPES } from '../lib/constants';
 
 const BUCKET = 'content';
@@ -31,6 +31,7 @@ export function createSupabaseApi(url: string, key: string): Api {
     async signIn(email, password) {
       const r = await sb.auth.signInWithPassword({ email, password });
       if (r.error) throw new Error(r.error.message);
+      void sb.rpc('log_sign_in').then(() => {}, () => {});
     },
     async signUp(email, password, fullName) {
       const r = await sb.auth.signUp({ email, password, options: { data: { full_name: fullName }, emailRedirectTo: window.location.origin } });
@@ -113,6 +114,14 @@ export function createSupabaseApi(url: string, key: string): Api {
       const row = { ...s, created_by: s.id ? undefined : uid };
       if (s.id) return ok(await sb.from('styles').update(row).eq('id', s.id).select().single()) as Style;
       return ok(await sb.from('styles').insert(row).select().single()) as Style;
+    },
+    async listActivity(f) {
+      let q = sb.from('activity').select('*').order('id', { ascending: false }).limit(100);
+      if (f.kind) q = q.eq('kind', f.kind);
+      if (f.actorId) q = q.eq('actor_id', f.actorId);
+      if (f.before) q = q.lt('id', f.before);
+      if (f.since) q = q.gte('created_at', f.since);
+      return ok(await q) as Activity[];
     },
     async listReferences() { return ok(await sb.from('style_references').select('*').eq('archived', false).order('created_at', { ascending: false })) as StyleReference[]; },
     async addReference(r, file) {

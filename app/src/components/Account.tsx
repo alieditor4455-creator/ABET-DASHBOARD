@@ -37,7 +37,7 @@ export function NotificationBell() {
           <div className="feed" style={{ maxHeight: 420, overflowY: 'auto' }}>
             {list.length ? list.map((n) => (
               <button key={n.id} className="fi" style={{ width: '100%', textAlign: 'left', opacity: n.read_at ? 0.6 : 1 }} onClick={() => go(n.id, n.item_id)}>
-                <span className="agent"><Icon name={n.kind === 'review' ? 'eye' : n.kind === 'approved' ? 'checkc' : n.kind === 'comment' ? 'edit' : n.kind === 'script' ? 'sparkles' : n.kind === 'compliance' ? 'shield' : 'bell'} /></span>
+                <span className="agent"><Icon name={n.kind === 'review' ? 'eye' : n.kind === 'approved' ? 'checkc' : n.kind === 'comment' ? 'edit' : n.kind === 'script' ? 'sparkles' : n.kind === 'compliance' ? 'shield' : n.kind === 'team' ? 'users' : 'bell'} /></span>
                 <span className="body">{!n.read_at && <b style={{ color: 'var(--brand-ink)' }}>● </b>}{n.message}<span className="when" style={{ display: 'block' }}>{ago(n.created_at)}</span></span>
               </button>
             )) : <Empty title="You’re all caught up">Reviews, approvals, comments and scripts from Claude show up here.</Empty>}

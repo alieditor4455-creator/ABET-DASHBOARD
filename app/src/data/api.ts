@@ -44,6 +44,8 @@ export interface Api {
   assetUrl(a: Asset): Promise<string>;
   saveStyle(s: Partial<Style> & { name: string; category: Style['category'] }): Promise<Style>;
   listReferences(): Promise<StyleReference[]>;
+  /** Team activity log for admins (newest first). */
+  listActivity(f: { kind?: string; actorId?: string; before?: number; since?: string }): Promise<Activity[]>;
   addReference(r: { content_type: ContentType; title: string; notes: string; url?: string | null }, file?: File | null): Promise<StyleReference>;
   archiveReference(id: string, archived: boolean): Promise<void>;
   /** Creates a draft style for Claude to build from references (admins). */
