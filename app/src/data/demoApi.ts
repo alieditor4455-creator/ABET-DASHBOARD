@@ -192,6 +192,7 @@ export function createDemoApi(): Api {
     async mfaVerify() { fail('Two-step login isn’t available in demo mode.'); },
     async mfaRemove() {},
     async signOutOthers() {},
+    async changePassword() {},
     async workerStatus() { return { waiting: jobs.filter((j) => j.kind === 'video' && j.status === 'waiting_for_claude').length, running: 0, styleRequests: styles.filter((s) => s.claude_requested_at && !s.claude_built_at).length, last: { at: minsAgo(55), status: 'succeeded', worker: 'Claude Code (scheduled)' } }; },
     async claudeConnections() { return [{ connected_at: minsAgo(600), client_id: 'claude-demo' }]; },
     async exportAll() { settings = { ...settings, last_backup_at: new Date().toISOString() }; return { exported_at: new Date().toISOString(), source: 'ABET Content OS (demo)', profiles, styles, content_items: items, scripts, captions, comments, assets, activity }; },

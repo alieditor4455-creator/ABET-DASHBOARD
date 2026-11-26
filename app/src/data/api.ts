@@ -66,6 +66,7 @@ export interface Api {
   mfaVerify(factorId: string, code: string): Promise<void>;
   mfaRemove(factorId: string): Promise<void>;
   signOutOthers(): Promise<void>;
+  changePassword(newPassword: string): Promise<void>;
   claudeConnections(): Promise<{ connected_at: string; client_id: string | null }[]>;
   /** Claude video worker status: queue sizes and the last finished request. */
   workerStatus(): Promise<{ waiting: number; running: number; styleRequests: number; last: { at: string; status: string; worker: string | null } | null }>;

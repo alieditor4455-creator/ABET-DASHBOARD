@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../data/store';
 import { friendlyError } from '../data/api';
 import { Icon } from './Icon';
-import { Avatar, Chip, Empty, Modal, Notice } from './ui';
+import { Avatar, Chip, Empty, Modal, Notice, PasswordInput } from './ui';
 import { ago, fmtDateTime } from '../lib/format';
 import { linkProps, navigate } from '../lib/router';
 import type { Comment, MfaFactor } from '../lib/types';
@@ -142,6 +142,7 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
     <Modal title="Account & security" onClose={onClose} wide>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}><Avatar profile={profile} lg /><div><b>{profile?.full_name}</b><div className="muted" style={{ fontSize: 12.5 }}>Signed in to ABET Content OS</div></div></div>
 
+      <ChangePassword />
       <section className="panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="lock" /><h3>Two-step login</h3><span style={{ marginLeft: 'auto' }}>{factors === null ? null : on ? <Chip cls="st-ok">On</Chip> : <Chip cls="st-warn">Off</Chip>}</span></div>
         <p style={{ fontSize: 13, color: 'var(--text-2)' }}>After your password, you enter a 6-digit code from an app on your phone (Google Authenticator, Microsoft Authenticator or 1Password). A stolen password alone can’t open your account. Strongly recommended for admins.</p>
@@ -169,5 +170,24 @@ export function AccountModal({ onClose }: { onClose: () => void }) {
           : <div style={{ display: 'flex', gap: 8 }}><button className="btn sm" onClick={() => setConfirmOut(false)}>Cancel</button><button className="btn sm primary" onClick={async () => { await run(() => api.signOutOthers(), 'Signed out everywhere else. Claude is disconnected'); setConfirmOut(false); }}>Yes, sign out other sessions</button></div>}
       </section>
     </Modal>
+  );
+}
+
+/** Lets a signed-in person set a new password (e.g. after an admin gave them a temporary one). */
+function ChangePassword() {
+  const { api, run } = useStore();
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const strong = pw.length >= 10 && /[A-Za-z]/.test(pw) && /\d/.test(pw);
+  const same = pw === pw2;
+  return (
+    <section className="panel" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="key" /><h3>Change password</h3></div>
+      <div className="field"><label htmlFor="npw">New password</label><PasswordInput id="npw" className="input" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} /></div>
+      <div className="field"><label htmlFor="npw2">Type it again</label><PasswordInput id="npw2" className="input" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} /></div>
+      <span className="muted" style={{ fontSize: 12 }}>{pw && !strong ? 'At least 10 characters, with letters and numbers.' : pw2 && !same ? 'The two passwords don’t match.' : 'Use at least 10 characters, with letters and numbers.'}</span>
+      <button className="btn primary sm" style={{ alignSelf: 'flex-start' }} disabled={!strong || !same}
+        onClick={async () => { const r = await run(() => api.changePassword(pw), 'Password changed'); if (r !== undefined) { setPw(''); setPw2(''); } }}>Save new password</button>
+    </section>
   );
 }

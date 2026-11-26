@@ -173,6 +173,7 @@ export function createSupabaseApi(url: string, key: string): Api {
       if (r.error) throw new Error(/invalid|expired/i.test(r.error.message) ? 'That code didn’t work. Check the time on your phone and try the newest code.' : r.error.message);
     },
     async mfaRemove(factorId) { const r = await sb.auth.mfa.unenroll({ factorId }); if (r.error) throw new Error(r.error.message); },
+    async changePassword(pw) { const r = await sb.auth.updateUser({ password: pw }); if (r.error) throw new Error(r.error.message); },
     async signOutOthers() { const r = await sb.auth.signOut({ scope: 'others' }); if (r.error) throw new Error(r.error.message); },
     async workerStatus() {
       const count = async (st: string) => (await sb.from('production_jobs').select('id', { count: 'exact', head: true }).eq('kind', 'video').eq('status', st)).count ?? 0;
