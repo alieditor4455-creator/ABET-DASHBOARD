@@ -673,3 +673,9 @@ button.link{background:none;border:0;padding:0;cursor:pointer}
 .ref-opt{display:flex;flex-direction:column;gap:6px;padding:6px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);text-align:left;font-size:12px;color:var(--text-2)}
 .ref-opt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ref-opt.on{border-color:var(--text);box-shadow:0 0 0 1px var(--text);color:var(--text)}
+.pw-wrap{position:relative;display:block}
+.pw-wrap .pw-input{width:100%;padding-right:44px}
+.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:36px;height:36px;display:grid;place-items:center;border:0;background:transparent;color:var(--muted);border-radius:8px;cursor:pointer}
+.pw-eye:hover{color:var(--text);background:var(--surface-3)}
+.pw-eye:focus-visible{outline:2px solid var(--accent,#AE1818);outline-offset:1px}
+.pw-input::-ms-reveal{display:none}

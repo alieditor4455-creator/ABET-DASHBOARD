@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
 import { thumb } from '../lib/thumbs';
 import { STATUS_CLASS, STATUS_LABEL, AVATAR_COLORS } from '../lib/constants';
@@ -107,4 +107,17 @@ export function CopyButton({ text, label = 'Copy', className = 'btn sm' }: { tex
 
 export function Switch({ id, checked, onChange, disabled, label }: { id: string; checked: boolean; onChange?: (v: boolean) => void; disabled?: boolean; label: string }) {
   return <label className="switch"><input type="checkbox" id={id} checked={checked} disabled={disabled} aria-label={label} onChange={(e) => onChange?.(e.target.checked)} /><span /></label>;
+}
+
+/** Password box with a show/hide (eye) button. */
+export function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="pw-wrap">
+      <input {...props} type={show ? 'text' : 'password'} className={`${props.className ?? 'input'} pw-input`} />
+      <button type="button" className="pw-eye" onClick={() => setShow((v) => !v)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show} title={show ? 'Hide password' : 'Show password'}>
+        <Icon name={show ? 'eyeoff' : 'eye'} size={18} />
+      </button>
+    </span>
+  );
 }

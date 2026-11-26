@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { Icon } from '../components/Icon';
-import { Notice } from '../components/ui';
+import { Notice, PasswordInput } from '../components/ui';
 import { friendlyError } from '../data/api';
 
 const URL_ = import.meta.env.VITE_SUPABASE_URL as string | undefined;
@@ -84,7 +84,7 @@ export function Connect() {
           </ul>
           {!mfa ? <>
             <div className="field"><label htmlFor="cem">ABET Content OS email</label><input id="cem" className="input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div className="field"><label htmlFor="cpw">Password</label><input id="cpw" className="input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+            <div className="field"><label htmlFor="cpw">Password</label><PasswordInput id="cpw" className="input" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
           </> : <div className="field"><label htmlFor="cotp">6-digit code from your authenticator app</label><input id="cotp" className="input" inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={7} required value={code} onChange={(e) => setCode(e.target.value)} style={{ fontSize: 20, letterSpacing: '.2em', textAlign: 'center' }} /></div>}
           {error && <Notice kind="err" icon="alert">{error}</Notice>}
           <div style={{ display: 'flex', gap: 8 }}>

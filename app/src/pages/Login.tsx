@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../data/store';
 import { friendlyError } from '../data/api';
 import { Icon } from '../components/Icon';
-import { Notice } from '../components/ui';
+import { Notice, PasswordInput } from '../components/ui';
 
 export function Login() {
   const { api } = useStore();
@@ -41,7 +41,7 @@ export function Login() {
         </div>
         {mode === 'up' && <div className="field"><label htmlFor="nm">Full name</label><input className="input" id="nm" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required /></div>}
         <div className="field"><label htmlFor="em">Work email</label><input className="input" id="em" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required /></div>
-        {mode !== 'reset' && <div className="field"><label htmlFor="pw">Password</label><input className="input" id="pw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'up' ? 'new-password' : 'current-password'} required minLength={mode === 'up' ? 8 : undefined} /></div>}
+        {mode !== 'reset' && <div className="field"><label htmlFor="pw">Password</label><PasswordInput className="input" id="pw" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'up' ? 'new-password' : 'current-password'} required minLength={mode === 'up' ? 8 : undefined} /></div>}
         {msg && <Notice kind={msg.kind} icon={msg.kind === 'ok' ? 'mail' : 'alert'}>{msg.text}</Notice>}
         <button className="btn primary" type="submit" disabled={busy} style={{ height: 44 }}>{busy && <Icon name="loader" spin size={16} />}{mode === 'in' ? 'Sign in' : mode === 'up' ? 'Create account' : 'Send reset link'}</button>
         <div className="login-links">

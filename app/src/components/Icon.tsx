@@ -4,7 +4,7 @@ import {
   SquarePlay, Presentation, Shapes, Image, GalleryHorizontal, FileImage, Megaphone, FileText, Check, CircleCheck, CircleX,
   TriangleAlert, Info, Clock, PenLine, RefreshCw, Sparkles, BookOpen, Users, Target, Send, Download, Upload, Eye, Archive,
   Repeat, Ellipsis, List, Cpu, Cloud, Film, Key, HardDrive, UserPlus, Lock, Zap, LoaderCircle, Type, LayoutGrid, AtSign,
-  Copy, LogOut, Mail, ExternalLink, type LucideIcon,
+  Copy, LogOut, Mail, ExternalLink, EyeOff, type LucideIcon,
 } from 'lucide-react';
 
 const MAP: Record<string, LucideIcon> = {
@@ -17,7 +17,7 @@ const MAP: Record<string, LucideIcon> = {
   book: BookOpen, users: Users, target: Target, send: Send, download: Download, upload: Upload, eye: Eye, archive: Archive,
   repeat: Repeat, more: Ellipsis, list: List, cpu: Cpu, cloud: Cloud, film: Film, key: Key, drive: HardDrive,
   userplus: UserPlus, lock: Lock, zap: Zap, loader: LoaderCircle, type: Type, grid: LayoutGrid, at: AtSign, copy: Copy,
-  logout: LogOut, mail: Mail, external: ExternalLink,
+  logout: LogOut, mail: Mail, external: ExternalLink, eyeoff: EyeOff,
 };
 
 export function Icon({ name, size = 18, className, spin }: { name: string; size?: number; className?: string; spin?: boolean }) {
