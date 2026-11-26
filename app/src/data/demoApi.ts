@@ -94,6 +94,8 @@ export function createDemoApi(): Api {
   const invitations: Invitation[] = [];
   const comments: Comment[] = [];
   const notifications: Notification[] = [
+    { id: 4, user_id: me.id, item_id: null, kind: 'team', message: 'Bilal T. signed up and joined as Video Editor', read_at: null, created_at: minsAgo(5) },
+    { id: 3, user_id: me.id, item_id: null, kind: 'team', message: 'Sana M. signed in', read_at: null, created_at: minsAgo(9) },
     { id: 2, user_id: me.id, item_id: null, kind: 'review', message: '“Reading a candlestick in three steps” is ready for review', read_at: null, created_at: minsAgo(95) },
     { id: 1, user_id: me.id, item_id: null, kind: 'comment', message: 'Hira K. commented on “Stop-loss basics for beginners”', read_at: minsAgo(30), created_at: minsAgo(40) },
   ];

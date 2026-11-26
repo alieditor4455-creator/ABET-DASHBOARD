@@ -4,16 +4,24 @@ import { friendlyError } from '../data/api';
 import { Icon } from './Icon';
 import { Avatar, Chip, Empty, Modal, Notice } from './ui';
 import { ago, fmtDateTime } from '../lib/format';
-import { navigate } from '../lib/router';
+import { linkProps, navigate } from '../lib/router';
 import type { Comment, MfaFactor } from '../lib/types';
 
 /* ---------------------------------------------------------------- notification bell */
 export function NotificationBell() {
-  const { data, api, refresh } = useStore();
+  const { data, api, refresh, can } = useStore();
   const [open, setOpen] = useState(false);
+  const admin = can('team.manage');
+  const [tab, setTab] = useState<'mine' | 'team'>('mine');
   const ref = useRef<HTMLDivElement>(null);
-  const list = data?.notifications ?? [];
-  const unread = list.filter((n) => !n.read_at).length;
+  const all = data?.notifications ?? [];
+  const mine = all.filter((n) => n.kind !== 'team');
+  const team = all.filter((n) => n.kind === 'team');
+  const list = admin && tab === 'team' ? team : admin ? mine : all;
+  const unread = all.filter((n) => !n.read_at).length;
+  const unreadMine = mine.filter((n) => !n.read_at).length;
+  const unreadTeam = team.filter((n) => !n.read_at).length;
+  const listUnread = list.filter((n) => !n.read_at);
   useEffect(() => {
     const close = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', close);
@@ -25,6 +33,8 @@ export function NotificationBell() {
     refresh();
     if (itemId) navigate(`/studio/${itemId}`);
   };
+  const markShown = async () => { await api.markNotificationsRead(listUnread.map((n) => n.id)).catch(() => {}); refresh(); };
+  const icon = (k: string) => (k === 'review' ? 'eye' : k === 'approved' ? 'checkc' : k === 'comment' ? 'edit' : k === 'script' ? 'sparkles' : k === 'compliance' ? 'shield' : k === 'team' ? 'users' : 'bell');
   return (
     <div style={{ position: 'relative' }} ref={ref}>
       <button className="circle-btn" aria-label={`Notifications${unread ? `, ${unread} unread` : ''}`} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
@@ -33,15 +43,24 @@ export function NotificationBell() {
       {open && (
         <div className="pop" role="dialog" aria-label="Notifications">
           <div className="panel-h" style={{ paddingBottom: 8 }}><h3>Notifications</h3>
-            <span className="r">{unread > 0 && <button className="link" onClick={async () => { await api.markNotificationsRead().catch(() => {}); refresh(); }}>Mark all read</button>}</span></div>
+            <span className="r">{listUnread.length > 0 && <button className="link" onClick={markShown}>Mark all read</button>}</span></div>
+          {admin && (
+            <div className="seg" role="tablist" aria-label="Notification type" style={{ margin: '0 16px 8px', display: 'flex' }}>
+              <button type="button" role="tab" aria-selected={tab === 'mine'} aria-pressed={tab === 'mine'} style={{ flex: 1, justifyContent: 'center' }} onClick={() => setTab('mine')}>For you{unreadMine ? ` · ${unreadMine}` : ''}</button>
+              <button type="button" role="tab" aria-selected={tab === 'team'} aria-pressed={tab === 'team'} style={{ flex: 1, justifyContent: 'center' }} onClick={() => setTab('team')}>Team activity{unreadTeam ? ` · ${unreadTeam}` : ''}</button>
+            </div>
+          )}
           <div className="feed" style={{ maxHeight: 420, overflowY: 'auto' }}>
             {list.length ? list.map((n) => (
               <button key={n.id} className="fi" style={{ width: '100%', textAlign: 'left', opacity: n.read_at ? 0.6 : 1 }} onClick={() => go(n.id, n.item_id)}>
-                <span className="agent"><Icon name={n.kind === 'review' ? 'eye' : n.kind === 'approved' ? 'checkc' : n.kind === 'comment' ? 'edit' : n.kind === 'script' ? 'sparkles' : n.kind === 'compliance' ? 'shield' : n.kind === 'team' ? 'users' : 'bell'} /></span>
+                <span className="agent"><Icon name={icon(n.kind)} /></span>
                 <span className="body">{!n.read_at && <b style={{ color: 'var(--brand-ink)' }}>● </b>}{n.message}<span className="when" style={{ display: 'block' }}>{ago(n.created_at)}</span></span>
               </button>
-            )) : <Empty title="You’re all caught up">Reviews, approvals, comments and scripts from Claude show up here.</Empty>}
+            )) : admin && tab === 'team'
+              ? <Empty title="No team activity yet">Sign-ups, sign-ins and what the team does show up here.</Empty>
+              : <Empty title="You’re all caught up">Reviews, approvals, comments and scripts from Claude show up here.</Empty>}
           </div>
+          {admin && tab === 'team' && <div style={{ padding: '8px 16px 14px', borderTop: '1px solid var(--border)' }}><a className="link" {...linkProps('/admin?tab=activity')} onClick={() => setOpen(false)}>View full activity log <Icon name="arrowR" size={14} /></a></div>}
         </div>
       )}
     </div>
