@@ -21,6 +21,11 @@ export interface RendererInfo {
 }
 
 export const RENDERERS: Record<string, RendererInfo> = {
+  'claude:poster': {
+    id: 'claude:poster', label: 'ABET Posters: 7 looks for ads, carousels and PDFs (made by Claude)', engine: 'claude-worker',
+    contentTypes: ['ad', 'carousel', 'pdf'],
+    outputs: ['PNG 1:1, 4:5, 9:16, 1200×628', 'A4/A3 print', 'Carousel slides + LinkedIn PDF', 'A4 PDF documents'],
+  },
   'claude:cinema': {
     id: 'claude:cinema', label: 'ABET Cinema: Cinematic Dark / Light Glass (made by Claude)', engine: 'claude-worker',
     contentTypes: ['reel', 'yt', 'explainer', 'ad', 'carousel'],

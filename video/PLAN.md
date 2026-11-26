@@ -92,3 +92,13 @@ Styles built from references store their look in `execution_config.tokens`; copy
 | `background` | `"aurora"` (default), `"plain"`, `"grid"` | Background treatment |
 | `motion` | `"smooth"` (default), `"snappy"`, `"slow"` | Entrance speed |
 | `captions` | `"none"` | Hide captions |
+
+## Poster template (`"template": "poster"`): static ads, posters, carousels, PDFs
+
+Set `"style"`: `red-neon`, `spotlight`, `glass-cards`, `hero-campaign`, `glass-objects`, `trader-spotlight` or `torn-reveal` (from the style's `execution_config.style`), and `"logo": false` (each design places the logo itself). Optional `"palette"` overrides the colour: `red`, `amber`, `orange`, `blue`, `purple`, `green`, `gold`. Sizes: `1:1`, `4:5`, `9:16`, `1.91:1` (1200×628 ads), `A4`, `A3` (add `"scale": 2` for print).
+
+**`poster` scene** (one per ad or carousel slide): `kicker`, `headline` (`**word**` = coloured), `sub`, `cta`, `tag`, `points` (list or `{text, note, icon}`), and `hero`: `stats` (with `cards` [{label, value, kicker}]), `screen`, `phone` (with `quotes` [{name, text}]), `candles`, `coins`, `shield`, `safe`, `globe`, `hourglass`, `padlock`, `scales`, `trader`, `none`. Style extras: `chips` (glass-objects), `side` lines (glass-cards), `handle` (trader-spotlight), `closer` and `footer` {handle, url} (torn-reveal).
+
+**PDF pages:** `cover` (kicker, headline, sub, tag, meta, hero), `page` (kicker, heading, body [paragraphs], points, tip, tip_title), `checklist` (heading, sub, items, tip), `table` (heading, sub, columns, rows, chart [{label, value}], note), `facts` (heading, sub, facts [{value, label}], points). A closing page with the risk warning is automatic.
+
+Prices in examples use placeholders like `1.08xx` and every chart is labelled illustrative. Use only facts ABET has provided: no invented spreads, returns, awards or "lowest/best" claims. Examples: `video/examples/posters/`.

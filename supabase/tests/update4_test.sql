@@ -12,7 +12,7 @@ end $$;
 create or replace function pg_temp.u(id text) returns void language plpgsql as $$
 begin perform set_config('request.jwt.claim.sub', id, false); perform set_config('request.jwt.claims', json_build_object('sub', id, 'aal', 'aal2')::text, false); execute 'set role authenticated'; end $$;
 
-select pg_temp.c5('ten starter styles approved and active', $q$ do $d$ begin if (select count(*) from public.styles where template_kind like 'claude:%' and status='approved' and active) <> 10 then raise exception 'count %', (select count(*) from public.styles where template_kind like 'claude:%' and status='approved' and active); end if; end $d$ $q$, false);
+select pg_temp.c5('starter styles approved and active (8 video + 17 poster)', $q$ do $d$ begin if (select count(*) from public.styles where template_kind like 'claude:%' and status='approved' and active) <> 25 then raise exception 'count %', (select count(*) from public.styles where template_kind like 'claude:%' and status='approved' and active); end if; end $d$ $q$, false);
 insert into public.content_items (id,title,topic,type,owner_id,created_by,status) values ('20000000-0000-0000-0000-000000000009','How ABET works','How ABET works','explainer','00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000002','draft');
 
 select pg_temp.u('00000000-0000-0000-0000-000000000002');

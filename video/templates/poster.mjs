@@ -153,6 +153,41 @@ function footer(s, ctx) {
   return bits.length ? `<div class="social">${bits.join('<i></i>')}</div>` : '';
 }
 
+// ------------------------------------------------------------------ PDF pages (guides, checklists, reports, fact sheets)
+const DOC_TYPES = ['cover', 'page', 'checklist', 'table', 'facts'];
+function docPage(s, c, logo) {
+  const { esc, rich } = c;
+  const para = (arr) => (arr ?? []).map((t) => `<p>${rich(t)}</p>`).join('');
+  const n = c.index + 1;
+  const head = `<header class="doc-h">${logo}<span class="doc-title">${esc(c.plan.title ?? '')}</span><span class="doc-n">${String(n).padStart(2, '0')}</span></header>`;
+  const foot = `<footer class="doc-f"><span>abetglobal.com</span><span>${esc(c.RISK_SHORT)}</span></footer>`;
+  let body = '';
+  switch (s.type) {
+    case 'cover':
+      return `<div class="poster doc cover st-${c.style}"><div class="bgfx"></div><div class="top">${logo}${s.tag ? `<span class="tag">${rich(s.tag)}</span>` : ''}</div>
+        <div class="copy left cover-copy">${s.kicker ? `<div class="kicker">${esc(s.kicker)}</div>` : ''}<h1 class="head">${rich(s.headline ?? '')}</h1>${s.sub ? `<p class="sub">${rich(s.sub)}</p>` : ''}
+        <div class="cover-meta">${esc(s.meta ?? 'Prepared by ABET Global')}</div></div>${heroOf(s, c)}
+        <div class="risk">${ic('warn')}<span>${esc(c.RISK_SHORT)}</span></div></div>`;
+    case 'page':
+      body = `<div class="doc-body">${s.kicker ? `<div class="kicker">${esc(s.kicker)}</div>` : ''}<h2 class="doc-h2">${rich(s.heading ?? '')}</h2><div class="doc-text">${para(s.body)}</div>
+        ${s.points ? glassList(s, c) : ''}${s.tip ? `<div class="doc-tip">${ic('bulb')}<div><b>${esc(s.tip_title ?? 'Tip')}</b><p>${rich(s.tip)}</p></div></div>` : ''}</div>`; break;
+    case 'checklist':
+      body = `<div class="doc-body"><h2 class="doc-h2">${rich(s.heading ?? 'Checklist')}</h2>${s.sub ? `<p class="doc-lead">${rich(s.sub)}</p>` : ''}
+        <ul class="checks-list${(s.items ?? []).length > 8 ? ' two' : ''}">${(s.items ?? []).map((it) => `<li><i class="box"></i><span>${rich(typeof it === 'string' ? it : it.text)}</span></li>`).join('')}</ul>
+        ${s.tip ? `<div class="doc-tip">${ic('bulb')}<div><b>${esc(s.tip_title ?? 'Remember')}</b><p>${rich(s.tip)}</p></div></div>` : ''}</div>`; break;
+    case 'table':
+      body = `<div class="doc-body"><h2 class="doc-h2">${rich(s.heading ?? '')}</h2>${s.sub ? `<p class="doc-lead">${rich(s.sub)}</p>` : ''}
+        ${s.chart ? `<div class="doc-chart">${H.stats({ cards: s.chart }, c)}</div>` : ''}
+        <table class="doc-table"><thead><tr>${(s.columns ?? []).map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${(s.rows ?? []).map((r) => `<tr>${r.map((v) => `<td>${rich(String(v))}</td>`).join('')}</tr>`).join('')}</tbody></table>
+        <p class="doc-note">${esc(s.note ?? 'Illustrative example, not real market data or a recommendation.')}</p></div>`; break;
+    case 'facts':
+      body = `<div class="doc-body"><h2 class="doc-h2">${rich(s.heading ?? '')}</h2>${s.sub ? `<p class="doc-lead">${rich(s.sub)}</p>` : ''}
+        <div class="facts">${(s.facts ?? []).map((f) => `<div class="fact"><b>${esc(f.value)}</b><span>${rich(f.label)}</span></div>`).join('')}</div>
+        ${s.points ? glassList(s, c) : ''}</div>`; break;
+  }
+  return `<div class="poster doc st-${c.style}"><div class="bgfx soft"></div>${head}${body}${foot}</div>`;
+}
+
 // ------------------------------------------------------------------ scenes
 function scene(s, ctx) {
   const style = STYLES.includes(ctx.plan.style) ? ctx.plan.style : 'hero-campaign';
@@ -161,6 +196,7 @@ function scene(s, ctx) {
   const risk = `<div class="risk">${ic('warn')}<span>${ctx.esc(ctx.plan.risk_text ?? ctx.RISK_SHORT)}</span></div>`;
   const tag = s.tag ? `<span class="tag">${ctx.rich(s.tag)}</span>` : '';
 
+  if (DOC_TYPES.includes(s.type)) return docPage(s, c, logo);
   if (s.type === '__end') {
     return `<div class="poster end"><div class="bgfx"></div>${logo.replace('class="logo"', 'class="logo big"')}<p class="url">abetglobal.com · @abet.global</p>
       <p class="end-risk">${ctx.esc(ctx.RISK_SHORT)}</p><p class="end-reg">${ctx.esc(ctx.REG_LINE)}</p></div>`;
@@ -402,6 +438,34 @@ body{background:var(--bg);color:var(--fg);font-family:Poppins,sans-serif;-webkit
 /* ================= end card (carousels) ================= */
 .poster.end{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3vmin;text-align:center;background:radial-gradient(ellipse 70% 45% at 50% 55%,rgb(var(--g) / .4),transparent 70%),var(--bg)}
 .end .url{font:500 3vmin Poppins;color:var(--mute)}.end-risk{font:400 2.2vmin/1.5 Poppins;color:var(--mute);max-width:80%}.end-reg{font:400 1.8vmin/1.5 Poppins;color:var(--mute);opacity:.8;max-width:80%}
+/* ================= PDF pages ================= */
+.doc .bgfx.soft{opacity:.45}
+.doc-h{position:relative;z-index:3;display:flex;align-items:center;gap:2vmin;padding-bottom:2vmin;border-bottom:1px solid var(--line)}
+.doc-h .logo{height:3.4vmin}.doc-title{font:500 1.9vmin/1 Poppins;color:var(--mute)}.doc-n{margin-left:auto;font:600 2vmin/1 Poppins;color:var(--a1)}
+.doc-body{position:relative;z-index:3;display:flex;flex-direction:column;gap:3vmin;margin-top:5vmin}
+.doc-h2{font:600 5.4vmin/1.08 Poppins;letter-spacing:-.035em;text-wrap:balance}.doc-h2 em{font-style:normal;color:var(--a1)}
+.doc-lead{font:400 2.4vmin/1.5 Poppins;color:var(--mute);max-width:85%}
+.doc-text{display:flex;flex-direction:column;gap:2vmin;max-width:90%}.doc-text p{font:400 2.3vmin/1.65 Poppins;color:var(--fg);opacity:.9}.doc-text em{font-style:normal;color:var(--a1);font-weight:600}
+.doc-tip{display:flex;gap:2.4vmin;align-items:flex-start;padding:3vmin;border-radius:2.4vmin;background:rgb(var(--g) / .1);border:1px solid rgb(var(--g) / .45)}
+.doc-tip .ic{width:4vmin;height:4vmin;flex:none;color:var(--a1)}.doc-tip b{font:600 2.3vmin Poppins}.doc-tip p{font:400 2.1vmin/1.55 Poppins;color:var(--mute);margin-top:.6vmin}
+.doc .glist{width:100%;margin-top:0}.doc .gitem{padding:1.8vmin 2.6vmin 1.8vmin 1.8vmin}.doc .gicon{width:6.4vmin;height:6.4vmin}.doc .gtxt b{font-size:2.5vmin}.doc .gnum{font-size:4.6vmin}
+.checks-list{list-style:none;display:flex;flex-direction:column;gap:1.6vmin}.checks-list.two{display:grid;grid-template-columns:1fr 1fr;gap:1.6vmin 4vmin}
+.checks-list li{display:flex;gap:2vmin;align-items:flex-start;font:400 2.4vmin/1.45 Poppins;padding:1.8vmin 2.2vmin;border-radius:1.6vmin;border:1px solid var(--line);background:var(--glass)}
+.checks-list .box{flex:none;width:3vmin;height:3vmin;border-radius:.7vmin;border:.3vmin solid var(--a1);margin-top:.2vmin}
+.doc-chart{position:relative;height:42vmin;margin-bottom:2vmin}.doc-chart .h-stats{position:absolute;inset:0}.doc-chart .scard{height:92%;bottom:4%}.doc-chart .scard.s1{bottom:4%}.doc-chart .months{display:none}
+.doc-table{width:100%;border-collapse:collapse;font:400 2.1vmin/1.4 Poppins}
+.doc-table th{text-align:left;font-weight:600;color:var(--mute);font-size:1.7vmin;letter-spacing:.08em;text-transform:uppercase;padding:1.4vmin 1.6vmin;border-bottom:.3vmin solid var(--a1)}
+.doc-table td{padding:1.6vmin;border-bottom:1px solid var(--line)}.doc-table tr:nth-child(even) td{background:var(--glass)}.doc-table em{font-style:normal;color:var(--a1);font-weight:600}
+.doc-note{font:400 1.6vmin Poppins;color:var(--mute)}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:2vmin}
+.fact{padding:3vmin 2.6vmin;border-radius:2.4vmin;background:linear-gradient(150deg,rgb(var(--g) / .18),var(--glass));border:1px solid rgb(var(--g) / .4);display:flex;flex-direction:column;gap:1vmin}
+.fact b{font:700 5vmin/1 Poppins;letter-spacing:-.03em;color:var(--a1)}.fact span{font:400 1.9vmin/1.4 Poppins;color:var(--mute)}
+.doc-f{position:absolute;z-index:3;left:6.5vmin;right:6.5vmin;bottom:3.4vmin;display:flex;gap:3vmin;justify-content:space-between;font:400 1.4vmin/1.4 Poppins;color:var(--mute);border-top:1px solid var(--line);padding-top:1.6vmin}
+.doc-f span:last-child{max-width:70%;text-align:right}
+.doc.cover .cover-copy{margin-top:16vmin;max-width:78%}.doc.cover .head{font-size:9vmin}.cover-meta{font:500 2vmin Poppins;color:var(--mute);margin-top:2vmin;padding-top:2vmin;border-top:.3vmin solid var(--a1);display:inline-block}
+.doc.cover .hero{height:40%;bottom:7%}
+.a-A4 .slide-n,.a-A3 .slide-n,.a-A4 .swipe,.a-A3 .swipe{display:none}
+
 /* ---- square fine-tuning */
 .a-1x1 .torn{height:25%;top:8%}.a-1x1 .torn-copy{margin-top:24vmin}.a-1x1 .st-torn-reveal .head{font-size:7.2vmin}
 .a-1x1 .bbox{margin-top:2.4vmin;padding:2.2vmin 3vmin}.a-1x1 .closer{margin-top:2vmin;font-size:3vmin}.a-1x1 .social{bottom:8vmin}
@@ -412,7 +476,7 @@ body{background:var(--bg);color:var(--fg);font-family:Poppins,sans-serif;-webkit
 
 export default {
   xf: 0,
-  types: ['poster'],
+  types: ['poster', 'cover', 'page', 'checklist', 'table', 'facts'],
   css,
   chrome,
   scene,

@@ -125,8 +125,8 @@ function NewTopic({ type, refId }: { type: ContentType; refId?: string | null })
   const wc = workerConfig(style?.execution_config);
   const [req, setReq] = useState<VideoRequest>({ output: 'video', aspect: '16:9', length: '' });
   useEffect(() => { if (style) setReq({ output: wc.outputs[0], aspect: wc.aspects[0], length: wc.lengths[Math.min(1, wc.lengths.length - 1)] }); }, [style?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  const what = req.output === 'pdf' ? 'PDF' : req.output === 'slides' ? 'carousel' : req.output === 'image' ? 'image' : 'video';
-  const outLabel = { video: 'Video', image: 'Static image', slides: 'Slides', pdf: 'PDF' } as const;
+  const what = req.output === 'pdf' ? 'PDF' : req.output === 'slides' ? 'carousel' : req.output === 'image' ? 'poster' : 'video';
+  const outLabel = { video: 'Video', image: 'Static poster', slides: 'Slides', pdf: type === 'carousel' ? 'LinkedIn PDF' : 'PDF' } as const;
 
   const start = async (mode: 'full' | 'script') => {
     if (!topic.trim()) return;
@@ -184,7 +184,7 @@ function NewTopic({ type, refId }: { type: ContentType; refId?: string | null })
             <section className="panel"><div className="panel-b" style={{ paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <span className="muted" style={{ fontSize: 12.5, fontWeight: 500 }}>3 · Shape and length</span>
               {wc.outputs.length > 1 && <div className="field"><span className="lbl">Output</span><div className="seg" role="group" aria-label="Output">{wc.outputs.map((o) => <button key={o} type="button" aria-pressed={req.output === o} onClick={() => setReq({ ...req, output: o })}>{outLabel[o]}</button>)}</div></div>}
-              {wc.aspects.length > 1 && <div className="field"><span className="lbl">Shape</span><div className="seg" role="group" aria-label="Shape">{wc.aspects.map((a) => <button key={a} type="button" aria-pressed={req.aspect === a} onClick={() => setReq({ ...req, aspect: a })}>{a === '16:9' ? '16:9 landscape' : a === '9:16' ? '9:16 vertical' : a === '1:1' ? '1:1 square' : a === '4:5' ? '4:5 portrait' : a}</button>)}</div></div>}
+              {wc.aspects.length > 1 && <div className="field"><span className="lbl">Shape</span><div className="seg" role="group" aria-label="Shape">{wc.aspects.map((a) => <button key={a} type="button" aria-pressed={req.aspect === a} onClick={() => setReq({ ...req, aspect: a })}>{({ '16:9': '16:9 landscape', '9:16': '9:16 vertical', '1:1': '1:1 square', '4:5': '4:5 portrait', '1.91:1': 'Ad 1200×628', A4: 'A4 print', A3: 'A3 print' } as Record<string, string>)[a] ?? a}</button>)}</div></div>}
               {req.output !== 'image' && <div className="field"><span className="lbl">Length</span><div className="seg" role="group" aria-label="Length">{wc.lengths.map((l) => <button key={l} type="button" aria-pressed={req.length === l} onClick={() => setReq({ ...req, length: l })}>{l}</button>)}</div></div>}
               {refs.length > 0 && <div className="field"><span className="lbl">Make it like this (optional): pick up to 3 references</span>
                 <div className="ref-pick">{refs.slice(0, 12).map((r) => { const on = refIds.includes(r.id); return (
