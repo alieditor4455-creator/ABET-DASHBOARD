@@ -24,7 +24,7 @@ const { chromium } = createRequire(import.meta.url)('playwright');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 
-export const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350], A4: [1240, 1754] };
+export const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080], '4:5': [1080, 1350], '1.91:1': [1200, 628], A4: [1240, 1754], A3: [1754, 2480] };
 export const REG_LINE = 'ABET is a registered trading services provider in Anguilla under registration number A000000977.';
 export const RISK_SHORT = 'CFDs are complex instruments traded on leverage and carry a high risk of losing money. Only trade with money you can afford to lose.';
 const FPS = 30;
@@ -52,7 +52,7 @@ export function validatePlan(plan, extraTypes = []) {
   const errs = [];
   if (!plan || typeof plan !== 'object') return ['The plan must be a JSON object.'];
   if (!['video', 'slides', 'pdf'].includes(plan.output ?? 'video')) errs.push('output must be video, slides or pdf.');
-  const aspect = plan.output === 'pdf' ? 'A4' : plan.aspect ?? '16:9';
+  const aspect = plan.output === 'pdf' ? plan.aspect ?? 'A4' : plan.aspect ?? '16:9';
   if (!SIZES[aspect]) errs.push(`aspect must be one of ${Object.keys(SIZES).join(', ')}.`);
   if (!Array.isArray(plan.scenes) || !plan.scenes.length) errs.push('scenes must be a non-empty array.');
   (plan.scenes ?? []).forEach((s, i) => {
@@ -141,7 +141,7 @@ export async function loadTemplate(name = 'abet-motion') {
 
 export async function buildHtml(plan, planDir) {
   const output = plan.output ?? 'video';
-  const aspect = output === 'pdf' ? 'A4' : plan.aspect ?? '16:9';
+  const aspect = output === 'pdf' ? plan.aspect ?? 'A4' : plan.aspect ?? '16:9';
   const [W, H] = SIZES[aspect];
   const theme = plan.theme ?? 'light';
   const asset = (src) => (/^(https?:|data:|file:)/.test(src) ? src : pathToFileURL(path.resolve(planDir, src)).href);
@@ -161,7 +161,7 @@ export async function buildHtml(plan, planDir) {
   const ctx = { theme, aspect, W, H, land: W >= H, output, total, esc, rich, words, asset, file, chartSvg, RISK_SHORT, REG_LINE, plan };
   const css = mod ? mod.css(ctx) : fs.readFileSync(path.join(HERE, 'templates', `${plan.template ?? 'abet-motion'}.css`), 'utf8');
   const html = `<!doctype html><html><head><meta charset="utf-8"><style>${fontFace}\n${css}</style></head>
-<body class="theme-${theme} out-${output} ${W >= H ? 'land' : 'port'} a-${aspect.replace(':', 'x')}" style="width:${W}px;height:${H}px;--total:${total}s">
+<body class="theme-${theme} out-${output} ${W >= H ? 'land' : 'port'} a-${aspect.replace(':', 'x').replace('.', '_')}" style="width:${W}px;height:${H}px;--total:${total}s">
 ${mod ? mod.chrome(ctx) : `<div class="bg"><div class="glow"></div></div>`}
 ${plan.logo === false ? '' : `<img class="corner-logo" src="${pathToFileURL(path.join(ROOT, 'brand/logos', logo))}" alt="">`}
 ${timed.map((s, i) => `<section class="scene t-${s.type}${s.accent ? ` ac-${s.accent}` : ''}" data-s="${s.start}" data-e="${s.end}" data-e2="${i < timed.length - 1 ? s.end + xf : s.end}" data-cap="${esc(s.caption ?? '')}" style="--s:${s.start}s;--e:${s.end}s;--dur:${s.end - s.start}s;--xf:${xf}s">${mod ? mod.scene(s, { ...ctx, index: i, count: timed.length }) : s.type === '__end' ? endCard(theme) : sceneBody(s, { asset })}${output === 'slides' && plan.scenes.length > 1 ? `<div class="slide-n">${i + 1} / ${timed.length}</div>${i === 0 ? '<div class="swipe">Swipe →</div>' : ''}` : ''}</section>`).join('\n')}
@@ -195,7 +195,8 @@ export async function render(plan, out, { planDir = process.cwd(), preview = fal
   fs.writeFileSync(tmp, html);
   const browser = await chromium.launch();
   try {
-    const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+    const scale = Math.max(1, Math.min(3, Number(plan.scale) || 1));
+    const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: output === 'video' ? 1 : scale });
     await page.goto(pathToFileURL(tmp).href);
     await page.evaluate(() => document.fonts.ready);
     const shotAt = async (t, file, type = 'png') => { await page.evaluate((x) => window.__seek(x), t); return page.screenshot(file ? { path: file, type } : { type: 'jpeg', quality: 90 }); };
